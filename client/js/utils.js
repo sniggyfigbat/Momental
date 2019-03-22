@@ -1,0 +1,86 @@
+//	***
+//	utils.js start
+//	***
+
+utils = {};
+
+utils.PI =	3.1415926535897932384626433832795028841971693993751058209749445923078164062;
+utils.TAU =	6.2831853071795864769252867665590057683943387987502116419498891846156328125;
+
+utils.getSpriteScale = (GP, originalPixelSize, desiredGUSize) => (GP.settings.pixelScaleFactor * desiredGUSize / originalPixelSize);
+
+utils.rotateToPoint = (mxOrM, myOrP, px, py) => {  
+	// M is dest (look-at)
+	// P is start (look-from)
+
+	// Code adapted from 'http://proclive.io/shooting-tutorial/'. Many thanks!
+
+	let dist_Y, dist_X;
+	
+	if ((mxOrM.x != null) && (mxOrM.y != null) && (myOrP.x != null) && (myOrP.y != null)) {
+		// Two points.
+		dist_Y = mxOrM.y - myOrP.y;
+		dist_X = mxOrM.x - myOrP.x;
+	}
+	else {
+		// Four vals
+		dist_Y = myOrP - py;
+		dist_X = mxOrM - px;
+	}
+
+	let angle = Math.atan2(dist_Y,dist_X);
+	return angle;
+}
+
+utils.linearColourInterpolation = function(startColour, endColour, factor){
+	let start	= (startColour instanceof this.Colour)	? startColour	: new this.Colour(startColour);
+	let end 	= (endColour instanceof this.Colour)	? endColour		: new this.Colour(endColour);
+	let out		= new this.Colour();
+	
+	out.r = Math.round( ((end.r - start.r) * factor) + start.r );
+	out.g = Math.round( ((end.g - start.g) * factor) + start.g );
+	out.b = Math.round( ((end.b - start.b) * factor) + start.b );
+	
+	return out.asRGBNum();
+}
+
+utils.Colour = class {
+	constructor(RGBnum) {
+		if (RGBnum == null) {
+			this.r = 0;
+			this.g = 0;
+			this.b = 0;
+		}
+		else {
+			let r0 = (RGBnum & 0xff0000);
+			this.r = r0 >>> 16;
+			
+			let g0 = (RGBnum & 0x00ff00);
+			this.g = g0 >>> 8;
+			
+			this.b = (RGBnum & 0x0000ff);
+		}
+	}
+	
+	asRGBNum() {
+		let r0 = this.r << 16;
+		let g0 = this.g << 8;
+		let b0 = this.b;
+		
+		return (r0 | g0 | b0);
+	}
+}
+
+utils.bearingDelta = (ar, br) => {
+	// from https://rosettacode.org/wiki/Angle_difference_between_two_bearings#JavaScript
+	const [ax, ay] = [Math.sin(ar), Math.cos(ar)],
+		[bx, by] = [Math.sin(br), Math.cos(br)],
+
+	// Cross-product > 0 ?
+	sign = ((ay * bx) - (by * ax)) > 0 ? +1 : -1;
+
+	// Sign * dot-product
+	return sign * Math.acos((ax * bx) + (ay * by));
+};
+
+module.exports = utils;

@@ -1,0 +1,30 @@
+{
+  "name": "pisces",
+  "version": "0.0.1",
+  "description": "Simple platformer for collection of intelligent system training datasets.",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.16.4",
+    "moment": "^2.24.0",
+    "pixi-particles": "^4.0.1",
+    "pixi.js": "^5.0.0-rc.2",
+    "planck-js": "^0.3.5",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "brfs": "^2.0.2",
+    "nodemon": "^1.18.10",
+    "transform-loader": "^0.2.4",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.3.0",
+    "webpack-dev-middleware": "^3.6.1"
+  },
+  "scripts": {
+    "test": "echo \"Test Script run.\";",
+    "start": "node server",
+    "dev": "nodemon server",
+    "build": "webpack --config-name momental"
+  },
+  "author": "Stefan C Bauer",
+  "license": "ISC"
+}
