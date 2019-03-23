@@ -151,11 +151,46 @@ function Gameplay(world, app, IH, settings) {
 	});
 }
 
+
+
 //	***
 //	Utilities
 //	***
 
-
+Gameplay.prototype.loadLevel = function(level) {
+	// Byte map
+	// Each pixel is actually 4 bytes, or 32 bits:
+	
+	//	x5:		0-32 type id
+	//	x11:	options bits. Usually the first two are rotation.
+	
+	// Allows for two objects per space.
+	
+	pixels = this.app.renderer.plugins.extract.pixels(new PIXI.Sprite(level));
+	
+	if (pixels.length !== (34 * 34 * 4)) {
+		console.log("ERROR: Cannot load level, wrong size!");
+		return false;
+	}
+	
+	for (let i = 0; i < 34; i++) {	// x
+		for (let j = 0; j < 34; j++) {	// y
+			let index = ((j * 34) + i) * 4;
+			for (k = 0; k < 2; k++) {
+				let offsetIndex = index + (2 * k);
+				let typeID = pixels[offsetIndex] >>> 3;
+				if (typeID !== 0) {
+					type = prefabs.map[typeID];
+					if (type == null) { console.log("ERROR: Invalid typeID (" + typeID + ") detected when reading level!"); }
+					else {
+						this.makeObject(type, null, Vec2(i + 0.5, j + 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
+					}
+				} 
+			}
+		}
+	}
+	
+}
 
 /*
  *	IMPORTANT!
@@ -321,9 +356,11 @@ Gameplay.prototype.object = class GameObject {
 			this.GP._markedForDeath.push(this);
 		}
 	}
+	
+	translateOptions(bitA, bitB) { return {}; }
 }
 
-Gameplay.prototype.makeObject = function(type, name, position, rotation, options) {
+Gameplay.prototype.makeObject = function(type, name, position, rotation, options, bitA, bitB) {
 	if (!(type)) {
 		console.log("ERROR: No type specified to makeObject()!");
 		return {};
@@ -370,6 +407,9 @@ Gameplay.prototype.makeObject = function(type, name, position, rotation, options
 		retObj.name = (name) ? name : type;
 		retObj.type = type;
 		retObj.tags = [...prefab.tags];
+		
+		if (options == null && (bitA != null || bitB != null)) { options = retObj.translateOptions(bitA, bitB); }
+		if (options != null && options.rotation != null) { rotation = options.rotation; }
 		
 		// Make sprites
 		retObj.sprites = new PIXI.Container();
@@ -597,6 +637,69 @@ Gameplay.prototype.deleteObject = function(gameobject, options) {
 			}
 		}
 	}
+}
+
+//	***
+//	Getters
+//	***
+
+Gameplay.prototype.getObjectsOfType = function(type, areStatic) {
+	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
+	retObjs = [];
+	
+	if (this._spawnCounts[type] == null || this._spawnCounts[type] === 0) { return retObjs; }
+	
+	if (!areStatic === true) {
+		this.dynamicObjects.forEach((element) => {
+			if (element.type === type) { retObjs.push(element); }
+		})
+	}
+	
+	if (!areStatic === false) {
+		this.staticObjects.forEach((element) => {
+			if (element.type === type) { retObjs.push(element); }
+		})
+	}
+	
+	return retObjs;
+}
+
+Gameplay.prototype.getObjectsOfName = function(name, areStatic) {
+	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
+	retObjs = [];
+	
+	if (!areStatic === true) {
+		this.dynamicObjects.forEach((element) => {
+			if (element.name === name) { retObjs.push(element); }
+		})
+	}
+	
+	if (!areStatic === false) {
+		this.staticObjects.forEach((element) => {
+			if (element.name === name) { retObjs.push(element); }
+		})
+	}
+	
+	return retObjs;
+}
+
+Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
+	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
+	retObjs = [];
+	
+	if (!areStatic === true) {
+		this.dynamicObjects.forEach((element) => {
+			if (element.hasTag(tag)) { retObjs.push(element); }
+		})
+	}
+	
+	if (!areStatic === false) {
+		this.staticObjects.forEach((element) => {
+			if (element.hasTag(tag)) { retObjs.push(element); }
+		})
+	}
+	
+	return retObjs;
 }
 
 //	***

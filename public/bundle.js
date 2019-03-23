@@ -320,7 +320,8 @@ setupApp();
 loader
 	.add([ // Add assets to import below:
 		"assets/gameplay.json",
-		"assets/particles.json"
+		"assets/particles.json",
+		"TestLevel.png"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -378,7 +379,9 @@ function loadLevel(levelData) {
 		meterOrigin:		Vec2(0, 0)					// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
 	});
 	
-	for (let i = 0; i < 34; i++) {
+	GP.loadLevel(resources["TestLevel.png"].texture);
+	
+	/*for (let i = 0; i < 34; i++) {
 		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
 	}
 	
@@ -399,11 +402,11 @@ function loadLevel(levelData) {
 	
 	let wall2 = GP.makeObject('wall', 'wall02', Vec2(1.5, 8.5), 0);
 	let wall3 = GP.makeObject('wall', 'wall03', Vec2(2.5, 8.5), 0);
-	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);
+	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);*/
 	let player = GP.makeObject('player', 'player02', Vec2(2.5, 10), 0, {
 		hasJumpField: true,
 		hasPullField: true,
-		canSlowTime: true,
+		//canSlowTime: true, Don't have enough bits for this. Assume always true.
 		
 		hasShotgun: true,
 		shotgunStartsWithAmmo: true,
@@ -414,7 +417,7 @@ function loadLevel(levelData) {
 		
 		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?
 		});
-	//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
+	/*//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
 	
 	let wall5 = GP.makeObject('wall', 'wall05', Vec2(4.5, 8.75), utils.PI/6);
 	//player4 = GP.makeObject('player', 'player04', Vec2(3.5, 11.5), 0);
@@ -423,7 +426,7 @@ function loadLevel(levelData) {
 	
 	//let test = GP.makeObject('test', 'test', Vec2(17, 17), 0);
 	//wall1.foo().bar();
-	//player1.bar().baz();
+	//player1.bar().baz();*/
 	
 	for (let i = 0; i < 10; i++) {
 		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);
@@ -685,11 +688,46 @@ function Gameplay(world, app, IH, settings) {
 	});
 }
 
+
+
 //	***
 //	Utilities
 //	***
 
-
+Gameplay.prototype.loadLevel = function(level) {
+	// Byte map
+	// Each pixel is actually 4 bytes, or 32 bits:
+	
+	//	x5:		0-32 type id
+	//	x11:	options bits. Usually the first two are rotation.
+	
+	// Allows for two objects per space.
+	
+	pixels = this.app.renderer.plugins.extract.pixels(new PIXI.Sprite(level));
+	
+	if (pixels.length !== (34 * 34 * 4)) {
+		console.log("ERROR: Cannot load level, wrong size!");
+		return false;
+	}
+	
+	for (let i = 0; i < 34; i++) {	// x
+		for (let j = 0; j < 34; j++) {	// y
+			let index = ((j * 34) + i) * 4;
+			for (k = 0; k < 2; k++) {
+				let offsetIndex = index + (2 * k);
+				let typeID = pixels[offsetIndex] >>> 3;
+				if (typeID !== 0) {
+					type = prefabs.map[typeID];
+					if (type == null) { console.log("ERROR: Invalid typeID (" + typeID + ") detected when reading level!"); }
+					else {
+						this.makeObject(type, null, Vec2(i + 0.5, j + 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
+					}
+				} 
+			}
+		}
+	}
+	
+}
 
 /*
  *	IMPORTANT!
@@ -855,9 +893,11 @@ Gameplay.prototype.object = class GameObject {
 			this.GP._markedForDeath.push(this);
 		}
 	}
+	
+	translateOptions(bitA, bitB) { return {}; }
 }
 
-Gameplay.prototype.makeObject = function(type, name, position, rotation, options) {
+Gameplay.prototype.makeObject = function(type, name, position, rotation, options, bitA, bitB) {
 	if (!(type)) {
 		console.log("ERROR: No type specified to makeObject()!");
 		return {};
@@ -904,6 +944,9 @@ Gameplay.prototype.makeObject = function(type, name, position, rotation, options
 		retObj.name = (name) ? name : type;
 		retObj.type = type;
 		retObj.tags = [...prefab.tags];
+		
+		if (options == null && (bitA != null || bitB != null)) { options = retObj.translateOptions(bitA, bitB); }
+		if (options != null && options.rotation != null) { rotation = options.rotation; }
 		
 		// Make sprites
 		retObj.sprites = new PIXI.Container();
@@ -1131,6 +1174,69 @@ Gameplay.prototype.deleteObject = function(gameobject, options) {
 			}
 		}
 	}
+}
+
+//	***
+//	Getters
+//	***
+
+Gameplay.prototype.getObjectsOfType = function(type, areStatic) {
+	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
+	retObjs = [];
+	
+	if (this._spawnCounts[type] == null || this._spawnCounts[type] === 0) { return retObjs; }
+	
+	if (!areStatic === true) {
+		this.dynamicObjects.forEach((element) => {
+			if (element.type === type) { retObjs.push(element); }
+		})
+	}
+	
+	if (!areStatic === false) {
+		this.staticObjects.forEach((element) => {
+			if (element.type === type) { retObjs.push(element); }
+		})
+	}
+	
+	return retObjs;
+}
+
+Gameplay.prototype.getObjectsOfName = function(name, areStatic) {
+	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
+	retObjs = [];
+	
+	if (!areStatic === true) {
+		this.dynamicObjects.forEach((element) => {
+			if (element.name === name) { retObjs.push(element); }
+		})
+	}
+	
+	if (!areStatic === false) {
+		this.staticObjects.forEach((element) => {
+			if (element.name === name) { retObjs.push(element); }
+		})
+	}
+	
+	return retObjs;
+}
+
+Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
+	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
+	retObjs = [];
+	
+	if (!areStatic === true) {
+		this.dynamicObjects.forEach((element) => {
+			if (element.hasTag(tag)) { retObjs.push(element); }
+		})
+	}
+	
+	if (!areStatic === false) {
+		this.staticObjects.forEach((element) => {
+			if (element.hasTag(tag)) { retObjs.push(element); }
+		})
+	}
+	
+	return retObjs;
 }
 
 //	***
@@ -1463,15 +1569,22 @@ let prefabs = {};
 
 prefabs.mixins = {};
 
-prefabs.mixins['foo'] = (superclass) => class extends superclass {
-	foo() { console.log('"foo" - ' + this.name); return this; }
+//	***
+//	Level-reading mixins.
+//	***
+
+prefabs.mixins['loading_90rot'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		let mult = (bitA && 0x06) >>> 1;
+		opts.rotation = utils.PI * 0.5 * mult;
+		return opts;
+	}
 }
-prefabs.mixins['bar'] = (superclass) => class extends superclass {
-	bar() { console.log('"bar" - ' + this.name); return this; }
-}
-prefabs.mixins['baz'] = (superclass) => class extends superclass {
-	baz() { console.log('"baz" - ' + this.name); return this; }
-}
+
+//	***
+//	Core mixins.
+//	***
 
 prefabs.mixins['leavestrail'] = (superclass) => class extends superclass {
 	setup(options) {
@@ -1531,7 +1644,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 	setup(options) {
 		options = (options != null) ? options : {};
 		
-		this.canSlowTime = (options.canSlowTime == true);
+		this.canSlowTime = true; //(options.canSlowTime == true);
 		this.slowingTime = false;
 		
 		this.sprites.body = this.sprites.children[0]; // Order may be changed post-setup according to z-height, so make a permanent link.
@@ -2488,21 +2601,23 @@ prefabs.mixins['proj_launcher'] = (superclass) => class extends superclass {
 
 prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 	setup(options) {
-		let range			= options.range != null			? options.range			: 5,
+		let range			= options.range != null			? options.range			: 6,
 			halfAngleMax	= options.halfAngleMax != null	? options.halfAngleMax	: utils.PI / 12,
 			chainsLeft		= options.chainsLeft != null	? options.chainsLeft	: 3;
 		
+		// On the basis that it tends to miss directly-adjacent targets, I have to do some weird offsetting shit.
+		
 		// Do an area-query, use the results to calc optimal target, bish bash bosh.
-		let checkRange = this.GP.relGU2M(range + 1);
-		let beamRange = this.GP.relGU2M(range);
+		let beamRangeM	= this.GP.relGU2M(range);
 		
-		let posM	= this.GP.relGU2M(this.position),
-			posP	= this.GP.absM2P(posM),
-			rot		= this.rotation;
+		let posM		= this.GP.relGU2M(this.position),
+			rot			= this.rotation;
+			
+		let checkOriginOffset = Vec2(-Math.cos(rot), -Math.sin(rot)); // Check starts the angle 1GU behind the actual origin. Bizarrely. This is to avoid missing things directly next to you.
+		let checkOrigin = this.position.clone().add(checkOriginOffset);
 		
-		
-		let lower = posM.clone().sub(Vec2(checkRange, checkRange)),
-			upper = posM.clone().add(Vec2(checkRange, checkRange)),
+		let lower = posM.clone().sub(Vec2(beamRangeM, beamRangeM)),
+			upper = posM.clone().add(Vec2(beamRangeM, beamRangeM)),
 			aabb = planck.AABB(lower, upper),
 			foundBodies = [];
 			
@@ -2527,15 +2642,17 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 						foundBodies.push(body);
 						
 						// Get delta angle
-						let bodPos		= body.getPosition().clone(),
-							relative	= bodPos.clone().sub(posM),
+						let bodPos		= this.GP.absM2GU(body.getPosition().clone()),
+							relative	= bodPos.clone().sub(checkOrigin),
 							relAngle	= Math.atan2(relative.y, relative.x),
 							deltaAngle	= utils.bearingDelta(rot, relAngle),
 							dist		= relative.length();
-							
+						
+						
 						if (Math.abs(deltaAngle) > halfAngleMax) { return; }
-						if (dist > beamRange) { return; }
-						let hDist		= 1 - (dist / beamRange),
+						if (dist > range || dist < 1) { return; }
+						if (body === options.target.body) { return; }
+						let hDist		= 1 - ((dist - 1) / (range - 1)), // Account for angle offset
 							hAng		= 1 - (Math.abs(deltaAngle) / halfAngleMax),
 							heuristic = hDist + hAng;
 						
@@ -2552,9 +2669,8 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 		if (bestTarget == null) {
 			if (options.firstInChain) {
 				// Draw one sparking off into nowhere
-				let farPoint = Vec2(Math.cos(rot) * range, Math.sin(rot) * range);
-				farPoint.add(this.position);
-				let vis = new visuals.tesla_beam(this.GP, this.position, farPoint);
+				checkOriginOffset.mul(-range).add(this.position);
+				let vis = new visuals.tesla_beam(this.GP, this.position, checkOriginOffset);
 			}
 			return;
 		}
@@ -2666,7 +2782,7 @@ prefabs.wall = {
 			//filterMaskBits: 0x60,
 		}
 	],
-	mixins: [ 'foo', 'bar' ]
+	mixins: []
 };
 
 prefabs.player = {
@@ -3019,6 +3135,39 @@ prefabs.test = {
 		}                   
 	],
 	mixins: ['takes_damage']
+}
+
+//	***
+//	Level creation / reading
+//	***
+
+prefabs.map = {
+	0:	'empty',
+	
+	//	Environment
+	1:	'wall',
+	2:	'ramp',
+	3:	'c_ramp_2x2',
+	4:	'c_ramp_3x3',
+	5:	'c_ramp_4x4',
+	6:	'door_wall',
+	7:	'kill_field',
+	8:	'acc_field',
+	9:	'dec_field',
+	
+	//	Gameplay
+	10:	'player_spawn',
+	11:	'player_goal',
+	12:	'enemy_walker',
+	13:	'enemy_flier',
+	14:	'enemy_charger',
+	15:	'enemy_walker_spawner',
+	16:	'door_key',
+	
+	//	Powerups
+	20:	'player_unlock',
+	21:	'player_ammo',
+	22:	'player_powerup'
 }
 
 module.exports = prefabs;

@@ -160,7 +160,8 @@ setupApp();
 loader
 	.add([ // Add assets to import below:
 		"assets/gameplay.json",
-		"assets/particles.json"
+		"assets/particles.json",
+		"TestLevel.png"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -218,7 +219,9 @@ function loadLevel(levelData) {
 		meterOrigin:		Vec2(0, 0)					// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
 	});
 	
-	for (let i = 0; i < 34; i++) {
+	GP.loadLevel(resources["TestLevel.png"].texture);
+	
+	/*for (let i = 0; i < 34; i++) {
 		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
 	}
 	
@@ -239,11 +242,11 @@ function loadLevel(levelData) {
 	
 	let wall2 = GP.makeObject('wall', 'wall02', Vec2(1.5, 8.5), 0);
 	let wall3 = GP.makeObject('wall', 'wall03', Vec2(2.5, 8.5), 0);
-	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);
+	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);*/
 	let player = GP.makeObject('player', 'player02', Vec2(2.5, 10), 0, {
 		hasJumpField: true,
 		hasPullField: true,
-		canSlowTime: true,
+		//canSlowTime: true, Don't have enough bits for this. Assume always true.
 		
 		hasShotgun: true,
 		shotgunStartsWithAmmo: true,
@@ -254,7 +257,7 @@ function loadLevel(levelData) {
 		
 		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?
 		});
-	//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
+	/*//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
 	
 	let wall5 = GP.makeObject('wall', 'wall05', Vec2(4.5, 8.75), utils.PI/6);
 	//player4 = GP.makeObject('player', 'player04', Vec2(3.5, 11.5), 0);
@@ -263,7 +266,7 @@ function loadLevel(levelData) {
 	
 	//let test = GP.makeObject('test', 'test', Vec2(17, 17), 0);
 	//wall1.foo().bar();
-	//player1.bar().baz();
+	//player1.bar().baz();*/
 	
 	for (let i = 0; i < 10; i++) {
 		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);

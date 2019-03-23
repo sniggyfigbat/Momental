@@ -17,15 +17,22 @@ let prefabs = {};
 
 prefabs.mixins = {};
 
-prefabs.mixins['foo'] = (superclass) => class extends superclass {
-	foo() { console.log('"foo" - ' + this.name); return this; }
+//	***
+//	Level-reading mixins.
+//	***
+
+prefabs.mixins['loading_90rot'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		let mult = (bitA && 0x06) >>> 1;
+		opts.rotation = utils.PI * 0.5 * mult;
+		return opts;
+	}
 }
-prefabs.mixins['bar'] = (superclass) => class extends superclass {
-	bar() { console.log('"bar" - ' + this.name); return this; }
-}
-prefabs.mixins['baz'] = (superclass) => class extends superclass {
-	baz() { console.log('"baz" - ' + this.name); return this; }
-}
+
+//	***
+//	Core mixins.
+//	***
 
 prefabs.mixins['leavestrail'] = (superclass) => class extends superclass {
 	setup(options) {
@@ -85,7 +92,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 	setup(options) {
 		options = (options != null) ? options : {};
 		
-		this.canSlowTime = (options.canSlowTime == true);
+		this.canSlowTime = true; //(options.canSlowTime == true);
 		this.slowingTime = false;
 		
 		this.sprites.body = this.sprites.children[0]; // Order may be changed post-setup according to z-height, so make a permanent link.
@@ -1042,21 +1049,23 @@ prefabs.mixins['proj_launcher'] = (superclass) => class extends superclass {
 
 prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 	setup(options) {
-		let range			= options.range != null			? options.range			: 5,
+		let range			= options.range != null			? options.range			: 6,
 			halfAngleMax	= options.halfAngleMax != null	? options.halfAngleMax	: utils.PI / 12,
 			chainsLeft		= options.chainsLeft != null	? options.chainsLeft	: 3;
 		
+		// On the basis that it tends to miss directly-adjacent targets, I have to do some weird offsetting shit.
+		
 		// Do an area-query, use the results to calc optimal target, bish bash bosh.
-		let checkRange = this.GP.relGU2M(range + 1);
-		let beamRange = this.GP.relGU2M(range);
+		let beamRangeM	= this.GP.relGU2M(range);
 		
-		let posM	= this.GP.relGU2M(this.position),
-			posP	= this.GP.absM2P(posM),
-			rot		= this.rotation;
+		let posM		= this.GP.relGU2M(this.position),
+			rot			= this.rotation;
+			
+		let checkOriginOffset = Vec2(-Math.cos(rot), -Math.sin(rot)); // Check starts the angle 1GU behind the actual origin. Bizarrely. This is to avoid missing things directly next to you.
+		let checkOrigin = this.position.clone().add(checkOriginOffset);
 		
-		
-		let lower = posM.clone().sub(Vec2(checkRange, checkRange)),
-			upper = posM.clone().add(Vec2(checkRange, checkRange)),
+		let lower = posM.clone().sub(Vec2(beamRangeM, beamRangeM)),
+			upper = posM.clone().add(Vec2(beamRangeM, beamRangeM)),
 			aabb = planck.AABB(lower, upper),
 			foundBodies = [];
 			
@@ -1081,15 +1090,17 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 						foundBodies.push(body);
 						
 						// Get delta angle
-						let bodPos		= body.getPosition().clone(),
-							relative	= bodPos.clone().sub(posM),
+						let bodPos		= this.GP.absM2GU(body.getPosition().clone()),
+							relative	= bodPos.clone().sub(checkOrigin),
 							relAngle	= Math.atan2(relative.y, relative.x),
 							deltaAngle	= utils.bearingDelta(rot, relAngle),
 							dist		= relative.length();
-							
+						
+						
 						if (Math.abs(deltaAngle) > halfAngleMax) { return; }
-						if (dist > beamRange) { return; }
-						let hDist		= 1 - (dist / beamRange),
+						if (dist > range || dist < 1) { return; }
+						if (body === options.target.body) { return; }
+						let hDist		= 1 - ((dist - 1) / (range - 1)), // Account for angle offset
 							hAng		= 1 - (Math.abs(deltaAngle) / halfAngleMax),
 							heuristic = hDist + hAng;
 						
@@ -1106,9 +1117,8 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 		if (bestTarget == null) {
 			if (options.firstInChain) {
 				// Draw one sparking off into nowhere
-				let farPoint = Vec2(Math.cos(rot) * range, Math.sin(rot) * range);
-				farPoint.add(this.position);
-				let vis = new visuals.tesla_beam(this.GP, this.position, farPoint);
+				checkOriginOffset.mul(-range).add(this.position);
+				let vis = new visuals.tesla_beam(this.GP, this.position, checkOriginOffset);
 			}
 			return;
 		}
@@ -1220,7 +1230,7 @@ prefabs.wall = {
 			//filterMaskBits: 0x60,
 		}
 	],
-	mixins: [ 'foo', 'bar' ]
+	mixins: []
 };
 
 prefabs.player = {
@@ -1573,6 +1583,39 @@ prefabs.test = {
 		}                   
 	],
 	mixins: ['takes_damage']
+}
+
+//	***
+//	Level creation / reading
+//	***
+
+prefabs.map = {
+	0:	'empty',
+	
+	//	Environment
+	1:	'wall',
+	2:	'ramp',
+	3:	'c_ramp_2x2',
+	4:	'c_ramp_3x3',
+	5:	'c_ramp_4x4',
+	6:	'door_wall',
+	7:	'kill_field',
+	8:	'acc_field',
+	9:	'dec_field',
+	
+	//	Gameplay
+	10:	'player_spawn',
+	11:	'player_goal',
+	12:	'enemy_walker',
+	13:	'enemy_flier',
+	14:	'enemy_charger',
+	15:	'enemy_walker_spawner',
+	16:	'door_key',
+	
+	//	Powerups
+	20:	'player_unlock',
+	21:	'player_ammo',
+	22:	'player_powerup'
 }
 
 module.exports = prefabs;
