@@ -83,4 +83,16 @@ utils.bearingDelta = (ar, br) => {
 	return sign * Math.acos((ax * bx) + (ay * by));
 };
 
+utils.setCursorIcon = (GP, colourName) => {
+	//	Stupid but necessary workaround. Cursor gets reset to default constantly, by everything (wtf pixi?),
+	//	but doesn't detect changes in the default.
+	//	So you have to change the cursor mode AND the default, so that it'll update default properly.
+	
+	if (colourName == null) { colourName = "white"; }
+	let halfPSF = GP.settings.pixelScaleFactor / 2;
+	GP.app.renderer.plugins.interaction.cursorStyles.default = "url('cursors/cursor_" + colourName + "_" + GP.settings.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	
+	GP.app.renderer.plugins.interaction.setCursorMode(colourName);
+}
+
 module.exports = utils;

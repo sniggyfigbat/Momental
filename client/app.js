@@ -55,7 +55,7 @@ function setupApp() {
 			width: 2176,
 			height: 2176,
 			pixelScaleFactor: 64,
-			cursorIcon: "url('cursors/cursor_64p.png') 32 32,auto"
+			//cursorIconSize: "url('cursors/cursor_64p.png') 32 32,auto"
 		};
 	}
 	else if (minDim >= 1632) {	// Unlikely, but possible. 4K?
@@ -63,7 +63,7 @@ function setupApp() {
 			width: 1632,
 			height: 1632,
 			pixelScaleFactor: 48,
-			cursorIcon: "url('cursors/cursor_48p.png') 24 24,auto"
+			//cursorIcon: "url('cursors/cursor_48p.png') 24 24,auto"
 		};
 	}
 	else if (minDim >= 1088) {	// Still quite unlikely. 1440p, I guess?
@@ -71,7 +71,7 @@ function setupApp() {
 			width: 1088,
 			height: 1088,
 			pixelScaleFactor: 32,
-			cursorIcon: "url('cursors/cursor_32p.png') 16 16,auto"
+			//cursorIcon: "url('cursors/cursor_32p.png') 16 16,auto"
 		};
 	}
 	else if (minDim >= 816) {	// Most likely to be used. Good ol' 1080p.
@@ -79,7 +79,7 @@ function setupApp() {
 			width: 816,
 			height: 816,
 			pixelScaleFactor: 24,
-			cursorIcon: "url('cursors/cursor_24p.png') 12 12,auto"
+			//cursorIcon: "url('cursors/cursor_24p.png') 12 12,auto"
 		};
 	}
 	else {						// Minimum pixelScaleFactor is 16. Honestly, what are they using, a fucking smart-toaster?
@@ -87,7 +87,7 @@ function setupApp() {
 			width: 544,
 			height: 544,
 			pixelScaleFactor: 16,
-			cursorIcon: "url('cursors/cursor_16p.png') 8 8,auto"
+			//cursorIcon: "url('cursors/cursor_16p.png') 8 8,auto"
 		};
 	}
 		
@@ -152,7 +152,12 @@ function setupApp() {
 	bucket.xOffset = sideWidth;
 	bucket.yOffset = topsHeight;
 	
-	app.renderer.plugins.interaction.cursorStyles.default = bucket.cursorIcon;
+	let halfPSF = bucket.pixelScaleFactor / 2;
+	app.renderer.plugins.interaction.cursorStyles.default	= "url('cursors/cursor_white_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.white		= "url('cursors/cursor_white_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.red		= "url('cursors/cursor_red_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.green		= "url('cursors/cursor_green_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.blue		= "url('cursors/cursor_blue_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
 }
 
 setupApp();
@@ -268,10 +273,10 @@ function loadLevel(levelData) {
 	//wall1.foo().bar();
 	//player1.bar().baz();*/
 	
-	for (let i = 0; i < 10; i++) {
+	/*for (let i = 0; i < 10; i++) {
 		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);
 		let test = GP.makeObject('test', 'test_' + i, pos, 0, {maxHP: (Math.random() * 80) + 20});
-	}
+	}*/
 	
 }
 

@@ -183,7 +183,7 @@ Gameplay.prototype.loadLevel = function(level) {
 					type = prefabs.map[typeID];
 					if (type == null) { console.log("ERROR: Invalid typeID (" + typeID + ") detected when reading level!"); }
 					else {
-						this.makeObject(type, null, Vec2(i + 0.5, j + 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
+						this.makeObject(type, null, Vec2(i + 0.5, (34 - j) - 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
 					}
 				} 
 			}
@@ -491,21 +491,21 @@ Gameplay.prototype.makeObject = function(type, name, position, rotation, options
 				newSpr.position.y = pos.y;
 			}
 			else if (element.tex === '__triangle') {
-				// triangle (well, actually any complex cocave polygon)
+				// triangle (well, actually any complex convex polygon)
 				
-				let points;
+				let points = [];
 				if (element.points) {
-					points = [...element.points];
-					points.forEach((element) => {
-						element.x *= this.settings.pixelScaleFactor * scale.x;
-						element.y *= this.settings.pixelScaleFactor * scale.y;
+					element.points.forEach((element1) => {
+						let p1 = element1.clone();
+						p1.x *= this.settings.pixelScaleFactor * scale.x;
+						p1.y *= this.settings.pixelScaleFactor * scale.y;
+						points.push(p1);
 					});
 				}
 				else {
 					let halfWidth = scale.x * this.settings.pixelScaleFactor * 0.75;
 					let halfHeight = scale.y * this.settings.pixelScaleFactor * 0.5;
 					
-					points = [];
 					points.push(new PIXI.Point(0, -halfHeight));
 					points.push(new PIXI.Point((halfWidth * 0.57735026919),	(halfHeight * 0.5)));
 					points.push(new PIXI.Point((halfWidth * -0.57735026919),	(halfHeight * 0.5)));

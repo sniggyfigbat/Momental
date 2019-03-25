@@ -215,7 +215,7 @@ function setupApp() {
 			width: 2176,
 			height: 2176,
 			pixelScaleFactor: 64,
-			cursorIcon: "url('cursors/cursor_64p.png') 32 32,auto"
+			//cursorIconSize: "url('cursors/cursor_64p.png') 32 32,auto"
 		};
 	}
 	else if (minDim >= 1632) {	// Unlikely, but possible. 4K?
@@ -223,7 +223,7 @@ function setupApp() {
 			width: 1632,
 			height: 1632,
 			pixelScaleFactor: 48,
-			cursorIcon: "url('cursors/cursor_48p.png') 24 24,auto"
+			//cursorIcon: "url('cursors/cursor_48p.png') 24 24,auto"
 		};
 	}
 	else if (minDim >= 1088) {	// Still quite unlikely. 1440p, I guess?
@@ -231,7 +231,7 @@ function setupApp() {
 			width: 1088,
 			height: 1088,
 			pixelScaleFactor: 32,
-			cursorIcon: "url('cursors/cursor_32p.png') 16 16,auto"
+			//cursorIcon: "url('cursors/cursor_32p.png') 16 16,auto"
 		};
 	}
 	else if (minDim >= 816) {	// Most likely to be used. Good ol' 1080p.
@@ -239,7 +239,7 @@ function setupApp() {
 			width: 816,
 			height: 816,
 			pixelScaleFactor: 24,
-			cursorIcon: "url('cursors/cursor_24p.png') 12 12,auto"
+			//cursorIcon: "url('cursors/cursor_24p.png') 12 12,auto"
 		};
 	}
 	else {						// Minimum pixelScaleFactor is 16. Honestly, what are they using, a fucking smart-toaster?
@@ -247,7 +247,7 @@ function setupApp() {
 			width: 544,
 			height: 544,
 			pixelScaleFactor: 16,
-			cursorIcon: "url('cursors/cursor_16p.png') 8 8,auto"
+			//cursorIcon: "url('cursors/cursor_16p.png') 8 8,auto"
 		};
 	}
 		
@@ -312,7 +312,12 @@ function setupApp() {
 	bucket.xOffset = sideWidth;
 	bucket.yOffset = topsHeight;
 	
-	app.renderer.plugins.interaction.cursorStyles.default = bucket.cursorIcon;
+	let halfPSF = bucket.pixelScaleFactor / 2;
+	app.renderer.plugins.interaction.cursorStyles.default	= "url('cursors/cursor_white_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.white		= "url('cursors/cursor_white_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.red		= "url('cursors/cursor_red_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.green		= "url('cursors/cursor_green_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	app.renderer.plugins.interaction.cursorStyles.blue		= "url('cursors/cursor_blue_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
 }
 
 setupApp();
@@ -428,10 +433,10 @@ function loadLevel(levelData) {
 	//wall1.foo().bar();
 	//player1.bar().baz();*/
 	
-	for (let i = 0; i < 10; i++) {
+	/*for (let i = 0; i < 10; i++) {
 		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);
 		let test = GP.makeObject('test', 'test_' + i, pos, 0, {maxHP: (Math.random() * 80) + 20});
-	}
+	}*/
 	
 }
 
@@ -528,6 +533,18 @@ utils.bearingDelta = (ar, br) => {
 	// Sign * dot-product
 	return sign * Math.acos((ax * bx) + (ay * by));
 };
+
+utils.setCursorIcon = (GP, colourName) => {
+	//	Stupid but necessary workaround. Cursor gets reset to default constantly, by everything (wtf pixi?),
+	//	but doesn't detect changes in the default.
+	//	So you have to change the cursor mode AND the default, so that it'll update default properly.
+	
+	if (colourName == null) { colourName = "white"; }
+	let halfPSF = GP.settings.pixelScaleFactor / 2;
+	GP.app.renderer.plugins.interaction.cursorStyles.default = "url('cursors/cursor_" + colourName + "_" + GP.settings.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	
+	GP.app.renderer.plugins.interaction.setCursorMode(colourName);
+}
 
 module.exports = utils;
 
@@ -720,7 +737,7 @@ Gameplay.prototype.loadLevel = function(level) {
 					type = prefabs.map[typeID];
 					if (type == null) { console.log("ERROR: Invalid typeID (" + typeID + ") detected when reading level!"); }
 					else {
-						this.makeObject(type, null, Vec2(i + 0.5, j + 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
+						this.makeObject(type, null, Vec2(i + 0.5, (34 - j) - 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
 					}
 				} 
 			}
@@ -1028,21 +1045,21 @@ Gameplay.prototype.makeObject = function(type, name, position, rotation, options
 				newSpr.position.y = pos.y;
 			}
 			else if (element.tex === '__triangle') {
-				// triangle (well, actually any complex cocave polygon)
+				// triangle (well, actually any complex convex polygon)
 				
-				let points;
+				let points = [];
 				if (element.points) {
-					points = [...element.points];
-					points.forEach((element) => {
-						element.x *= this.settings.pixelScaleFactor * scale.x;
-						element.y *= this.settings.pixelScaleFactor * scale.y;
+					element.points.forEach((element1) => {
+						let p1 = element1.clone();
+						p1.x *= this.settings.pixelScaleFactor * scale.x;
+						p1.y *= this.settings.pixelScaleFactor * scale.y;
+						points.push(p1);
 					});
 				}
 				else {
 					let halfWidth = scale.x * this.settings.pixelScaleFactor * 0.75;
 					let halfHeight = scale.y * this.settings.pixelScaleFactor * 0.5;
 					
-					points = [];
 					points.push(new PIXI.Point(0, -halfHeight));
 					points.push(new PIXI.Point((halfWidth * 0.57735026919),	(halfHeight * 0.5)));
 					points.push(new PIXI.Point((halfWidth * -0.57735026919),	(halfHeight * 0.5)));
@@ -1576,8 +1593,18 @@ prefabs.mixins = {};
 prefabs.mixins['loading_90rot'] = (superclass) => class extends superclass {
 	translateOptions(bitA, bitB) {
 		let opts = super.translateOptions(bitA, bitB);
-		let mult = (bitA && 0x06) >>> 1;
+		let mult = (bitA & 0x06) >>> 1;
 		opts.rotation = utils.PI * 0.5 * mult;
+		return opts;
+	}
+}
+
+prefabs.mixins['loading_scale1to4'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		let firstBit = (bitA & 0x01) << 1;
+		let secondBit = (bitB & 0x80) >>> 7;
+		opts.scale = (firstBit | secondBit) + 1;
 		return opts;
 	}
 }
@@ -1639,6 +1666,123 @@ prefabs.mixins['takes_damage'] = (superclass) => class extends superclass {
 		if (super.update) super.update(deltaMS);
 	}
 }
+
+//	***
+//	Environment mixins.
+//	***
+
+prefabs.mixins['c_ramp_concave'] = (superclass) => class extends superclass {
+	setup(options) {
+		let dim = (options != null && options.scale != null) ? options.scale : 2,
+			segCount = 4 * dim,
+			twoDim = 2 * dim;
+		
+		this.sprites.children[0].scale.x *= dim;
+		this.sprites.children[0].scale.y *= dim;
+		this.sprites.children[0].anchor.set((twoDim - 1)/ twoDim, (twoDim - 1)/ twoDim);
+		
+		let angle = 0;
+		let segAng = utils.PI / (2 * segCount);
+		
+		for (let i = 0; i < segCount; i++) {
+			let nextAng = angle - segAng;
+			let def = {
+				name: 'c_ramp_concave_subsection',
+				shape: planck.Polygon([
+					Vec2(0.5, -0.5),
+					Vec2((Math.cos(angle) * dim) - dim + 0.5,	(Math.sin(angle) * dim) + dim -0.5),
+					Vec2((Math.cos(nextAng) * dim) - dim + 0.5,	(Math.sin(nextAng) * dim) + dim - 0.5)
+				]),
+				
+				density: 5.0,
+				friction: 0.75,
+				restitution: 0.25,
+				
+				filterCategoryBits: 0x0020
+			}
+			
+			this.body.createFixture(def);
+			angle = nextAng;
+		}
+		
+		if (super.setup) super.setup(options);
+	}
+}
+
+prefabs.mixins['c_ramp_convex'] = (superclass) => class extends superclass {
+	setup(options) {
+		let dim = (options != null && options.scale != null) ? options.scale : 2,
+			segCount = 4 * dim,
+			twoDim = 2 * dim;
+		
+		this.sprites.children[0].scale.x *= dim;
+		this.sprites.children[0].scale.y *= dim;
+		this.sprites.children[0].anchor.set((twoDim - 1)/ twoDim, (twoDim - 1)/ twoDim);
+		
+		let angle = utils.PI / 2;
+		let segAng = utils.PI / (2 * segCount);
+		
+		for (let i = 0; i < dim; i++) {
+			let ang1	= angle + (1 * segAng),
+				ang2	= angle + (2 * segAng),
+				ang3	= angle + (3 * segAng),
+				nextAng	= angle + (4 * segAng);
+			let def = {
+				name: 'c_ramp_convex_subsection',
+				shape: planck.Polygon([
+					Vec2(0.5, -0.5),
+					Vec2((Math.cos(angle) * dim) + 0.5,		(Math.sin(angle) * dim) - 0.5),
+					Vec2((Math.cos(ang1) * dim) + 0.5,		(Math.sin(ang1) * dim) - 0.5),
+					Vec2((Math.cos(ang2) * dim) + 0.5,		(Math.sin(ang2) * dim) - 0.5),
+					Vec2((Math.cos(ang3) * dim) + 0.5,		(Math.sin(ang3) * dim) - 0.5),
+					Vec2((Math.cos(nextAng) * dim) + 0.5,	(Math.sin(nextAng) * dim) - 0.5)
+				]),
+				
+				density: 5.0,
+				friction: 0.75,
+				restitution: 0.25,
+				
+				filterCategoryBits: 0x0020
+			}
+			
+			this.body.createFixture(def);
+			angle = nextAng;
+		}
+		
+		if (super.setup) super.setup(options);
+	}
+}
+
+/*
+prefabs.mixins['player_jumpfield'] = (superclass) => class extends superclass {
+	setup(options) {
+		this.player = options.player;
+		let axis = planck.Vec2(Math.cos(this.rotation), Math.sin(this.rotation));
+		this.joint = this.GP.world.createJoint(planck.PrismaticJoint({
+			lowerTranslation: 0,
+			upperTranslation: 0.75,
+			enableMotor: true,
+			enableLimit: true,
+			maxMotorForce: 3000,
+			motorSpeed: -10.0
+		}, this.player.body, this.body, this.player.body.getPosition(), axis));
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		if (super.update) super.update(deltaMS);
+		
+		let extension = this.joint.getJointTranslation();
+		if (extension <= 0.1) { this.sprites.visible = false; }
+		else { this.sprites.visible = true; }
+	}
+}
+*/
+
+//	***
+//	Player, Weapons & Projectiles
+//	***
 
 prefabs.mixins['player'] = (superclass) => class extends superclass {
 	setup(options) {
@@ -1719,8 +1863,6 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 	}
 	
 	update(deltaMS) {
-		if (super.update) super.update(deltaMS);
-		
 		let deltaS = deltaMS * 0.001;	
 		let left =	this.GP.IH.isTriggered('left'),
 			right =	this.GP.IH.isTriggered('right'),
@@ -2010,39 +2152,16 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		}
 		else { this.GP.timeFactor = 1; }
 		this.slowingTime = false;
-	}
-}
-
-/*
-prefabs.mixins['player_jumpfield'] = (superclass) => class extends superclass {
-	setup(options) {
-		this.player = options.player;
-		let axis = planck.Vec2(Math.cos(this.rotation), Math.sin(this.rotation));
-		this.joint = this.GP.world.createJoint(planck.PrismaticJoint({
-			lowerTranslation: 0,
-			upperTranslation: 0.75,
-			enableMotor: true,
-			enableLimit: true,
-			maxMotorForce: 3000,
-			motorSpeed: -10.0
-		}, this.player.body, this.body, this.player.body.getPosition(), axis));
 		
-		if (super.setup) super.setup(options);
+		if (super.update) super.update(deltaMS);
 	}
 	
-	update(deltaMS) {
-		if (super.update) super.update(deltaMS);
+	destroy(options) {
+		utils.setCursorIcon(this.GP, "white");
 		
-		let extension = this.joint.getJointTranslation();
-		if (extension <= 0.1) { this.sprites.visible = false; }
-		else { this.sprites.visible = true; }
+		//if (super.destroy) super.destroy(options);
 	}
 }
-*/
-
-//	***
-//	Weapons & Projectiles
-//	***
 
 prefabs.mixins['weapon'] = (superclass) => class extends superclass {
 	get active() {
@@ -2061,6 +2180,8 @@ prefabs.mixins['weapon'] = (superclass) => class extends superclass {
 		if (input) {
 			this.timer = (this.timer < 500) ? 500 : this.timer;
 			this.isSwitching = true;
+			
+			utils.setCursorIcon(this.GP, this.cursorColour);
 		}
 	}
 	
@@ -2215,6 +2336,8 @@ prefabs.mixins['weapon_shotgun'] = (superclass) => class extends superclass {
 		this.isReloading = false;
 		this.isSwitching = false;
 		
+		this.cursorColour = "blue";
+		
 		this.readyTint = 0x0000ff;
 		this.unreadyTint = 0x000000;
 		this.recoverTime = 500;
@@ -2329,6 +2452,8 @@ prefabs.mixins['weapon_launcher'] = (superclass) => class extends superclass {
 		this.isReloading = false;
 		this.isSwitching = false;
 		
+		this.cursorColour = "red";
+		
 		this.readyTint = 0xff0000;
 		this.unreadyTint = 0x000000;
 		this.recoverTime = 500;
@@ -2418,6 +2543,8 @@ prefabs.mixins['weapon_tesla'] = (superclass) => class extends superclass {
 		this.isRecovering = false;
 		this.isReloading = false;
 		this.isSwitching = false;
+		
+		this.cursorColour = "green";
 		
 		this.readyTint = 0x00bf00;
 		this.unreadyTint = 0x00bf00;//0x007f00;
@@ -2669,7 +2796,7 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 		if (bestTarget == null) {
 			if (options.firstInChain) {
 				// Draw one sparking off into nowhere
-				checkOriginOffset.mul(-range).add(this.position);
+				checkOriginOffset.mul(-(range - 1)).add(this.position);
 				let vis = new visuals.tesla_beam(this.GP, this.position, checkOriginOffset);
 			}
 			return;
@@ -2750,6 +2877,9 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
  *	128	:	0x0080	:	enemy sensors
 */
 
+//	***
+//	Define environment prefabs.
+//	***
 
 prefabs.wall = {
 	name: "wall",
@@ -2784,6 +2914,100 @@ prefabs.wall = {
 	],
 	mixins: []
 };
+
+prefabs.ramp = {
+	name: "ramp",
+	tags: ['static', 'terrain', 'rotatable'],
+	zIndex: 35,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0,
+			points: [
+				new PIXI.Point(-0.5, 0.5),
+				new PIXI.Point(0.5, -0.5),
+				new PIXI.Point(0.5, 0.5),
+			]
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'Ramp',
+			shape: planck.Polygon([
+				Vec2(-0.5, -0.5),
+				Vec2(0.5, 0.5),
+				Vec2(0.5, -0.5)
+			]),
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0020,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'loading_90rot' ]
+};
+
+prefabs.c_ramp_concave = {
+	name: "c_ramp_concave",
+	tags: ['static', 'terrain', 'rotatable', 'scalable'],
+	zIndex: 35,
+	sprites: [
+		{
+			tex: "terrain_curve_concave.png",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+	],
+	mixins: [ 'loading_90rot', 'loading_scale1to4', 'c_ramp_concave' ]
+};
+
+prefabs.c_ramp_convex = {
+	name: "c_ramp_convex",
+	tags: ['static', 'terrain', 'rotatable', 'scalable'],
+	zIndex: 35,
+	sprites: [
+		{
+			tex: "terrain_curve_convex.png",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+
+	],
+	mixins: [ 'loading_90rot', 'loading_scale1to4', 'c_ramp_convex' ]
+};
+
+//	***
+//	Define player and weapon prefabs.
+//	***
 
 prefabs.player = {
 	name: "player",
@@ -2839,42 +3063,6 @@ prefabs.player = {
 	],
 	mixins: [ 'leavestrail', 'player' ]
 };
-
-/*
-prefabs.player_jumpfield = {
-	name: "player_jumpfield",
-	tags: ['dynamic', 'player', 'subassembly'],
-	zIndex: 9,
-	sprites: [
-		{
-			tex: "circle_side.png",
-			tint: 0x7fffff,
-			alpha: 0.125,
-			anchor: Vec2(0.5, 0.5),
-			scale: Vec2(0.75, 0.75), // 0.75 * 0.125
-			pos: Vec2(0, 0),
-			rot: 0
-		}
-	],
-	body: {
-		type: 'dynamic'
-	},
-	fixtures: [
-		{
-			name: 'field',
-			shape: planck.Circle(0.375),
-			
-			density: 0.1,
-			friction: 0.25,
-			restitution: 0.5,
-			
-			filterCategoryBits: 0x0001,
-			filterMaskBits: 0x0020 // environment.
-		}                   
-	],
-	mixins: [ 'player_jumpfield' ]
-}
-*/
 
 prefabs.weapon_shotgun = {
 	name: "weapon_shotgun",
@@ -3147,13 +3335,12 @@ prefabs.map = {
 	//	Environment
 	1:	'wall',
 	2:	'ramp',
-	3:	'c_ramp_2x2',
-	4:	'c_ramp_3x3',
-	5:	'c_ramp_4x4',
-	6:	'door_wall',
-	7:	'kill_field',
-	8:	'acc_field',
-	9:	'dec_field',
+	3:	'c_ramp_concave',
+	4:	'c_ramp_convex',
+	5:	'door_wall',
+	6:	'kill_field',
+	7:	'acc_field',
+	8:	'dec_field',
 	
 	//	Gameplay
 	10:	'player_spawn',
@@ -3163,6 +3350,7 @@ prefabs.map = {
 	14:	'enemy_charger',
 	15:	'enemy_walker_spawner',
 	16:	'door_key',
+	17:	'pull_bobble',
 	
 	//	Powerups
 	20:	'player_unlock',
