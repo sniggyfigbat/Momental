@@ -248,7 +248,7 @@ function loadLevel(levelData) {
 	let wall2 = GP.makeObject('wall', 'wall02', Vec2(1.5, 8.5), 0);
 	let wall3 = GP.makeObject('wall', 'wall03', Vec2(2.5, 8.5), 0);
 	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);*/
-	let player = GP.makeObject('player', 'player02', Vec2(2.5, 10), 0, {
+	let player = GP.makeObject('player', 'player02', Vec2(18.5, 21.5), 0, {
 		hasJumpField: true,
 		hasPullField: true,
 		//canSlowTime: true, Don't have enough bits for this. Assume always true.

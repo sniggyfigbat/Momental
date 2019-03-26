@@ -787,4 +787,230 @@ visuals.tesla_beam = class {
 	}
 }
 
+visuals.proj_shotgun_death = function(GP, posGU, dealtDamage) {
+	let posP = GP.absGU2P(posGU);
+	let colour = dealtDamage ? 'ff6600' : '000000';
+	
+	let scale = utils.getSpriteScale(GP, 128, .25),
+		speed = GP.relGU2P(0.5);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 1, time: 0.5 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: colour, time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed * 2, time: 0 },
+					{ value: speed, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.75,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.5, max: 0.5 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: 4,
+			emitterLifetime: 0.2,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 2; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.door_key_death = function(GP, posGU, colour) {
+	let posP = GP.absGU2P(posGU);
+	
+	// Why doesn't PIXI particles take normal hex values? We may never know...
+	if (colour == 'red') { colour = 'ff0000'; }
+	else if (colour == 'green') { colour = '00ff00'; }
+	else if (colour == 'blue') { colour = '0000ff'; }
+	else { colour = 'ffffff'; }
+	
+	let scale = utils.getSpriteScale(GP, 128, .5),
+		speed = GP.relGU2P(2);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['squares.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: '000000', time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.25,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.5, max: 1 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: 10,
+			emitterLifetime: 0.2,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 2; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.proj_key = class {
+	constructor(projectile) {
+		this.parent = projectile;
+		
+		let posP = projectile.GP.absGU2P(projectile.position);
+		
+		// Why doesn't PIXI particles take normal hex values? We may never know...
+		let colour;
+		if (projectile.colour == 'red') { colour = 'ff0000'; }
+		else if (projectile.colour == 'green') { colour = '00ff00'; }
+		else if (projectile.colour == 'blue') { colour = '0000ff'; }
+		else { colour = 'dddddd'; }
+		
+		let scale = utils.getSpriteScale(projectile.GP, 128, .25),
+			radius = projectile.GP.relGU2P(1);
+		
+		this.emitter = new PIXI.particles.Emitter(
+			projectile.GP.particleStageLower,
+			particleTex['squares.png'],
+			{
+				alpha: {
+					list: [
+						{ value: 1, time: 0 },
+						{ value: 0, time: 1 }
+					],
+					isStepped: false
+				},
+				scale: {
+					list: [
+						{ value: scale, time: 0 },
+						{ value: scale, time: 1 }
+					],
+					minimumScaleMultiplier: 0.25
+				},
+				color: {
+					list: [
+						{ value: colour, time: 0 },
+						{ value: colour, time: 1 }
+					],
+					isStepped: false
+				},
+				speed: {
+					list: [
+						{ value: 0, time: 0 },
+						{ value: 0, time: 1 }
+					],
+					isStepped: false
+				},
+				startRotation: { min: 0, max: 360 },
+				rotationSpeed: { min: 0, max: 0 },
+				lifetime: { min: 0.5, max: 1 },
+				frequency: 0.1,
+				spawnChance: 10,
+				particlesPerWave: 1,
+				emitterLifetime: -1,
+				maxParticles: 1000,
+				pos: { x: posP.x, y: posP.y },
+				addAtBack: false,
+				spawnType: "circle",
+				spawnCircle: {
+					x: 0,
+					y: 0,
+					r: radius
+				}
+			}
+		);
+		
+		this._lifetimed = false; // Marked as being auto-destroyable upon completion.
+		this._lifetimer = -1; // emitterLifetime + lifetime.max + a bit.
+		this._markedForDeath = false;
+		projectile.GP.visuals.push(this);
+	}
+	
+	update(deltaS) {
+		if (this.parent != null && !this.parent._markedForDeath) {
+			let posP = this.parent.GP.absGU2P(this.parent.position);
+			this.emitter.updateSpawnPos(posP.x, posP.y);
+		}
+		this.emitter.update(deltaS);
+	}
+	
+	stopEmitting() {
+		this.emitter.emit = false;
+		this._lifetimed = true; // Marked as being auto-destroyable upon completion.
+		this._lifetimer = 5; // emitterLifetime + lifetime.max + a bit.
+	}
+	
+	destroy() {
+		this.emitter.destroy();
+	}
+}
+
 module.exports = visuals;

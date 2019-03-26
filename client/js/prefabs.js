@@ -7,7 +7,7 @@ let Sprite = PIXI.Sprite,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures,
 	particleTex = PIXI.Loader.shared.resources["assets/particles.json"].textures;
 
-let visuals = require('./visuals');
+const visuals = require('./visuals');
 	
 let prefabs = {};
 
@@ -59,39 +59,47 @@ prefabs.mixins['leavestrail'] = (superclass) => class extends superclass {
 
 prefabs.mixins['takes_damage'] = (superclass) => class extends superclass {
 	setup(options) {
-		this.maxHP	= (options.maxHP != null)	? options.maxHP	: 35;
+		this.maxHP	= (options.maxHP != null)	? options.maxHP	: 35; // 0 for invincible.
 		this.HP		= (options.HP != null)		? options.HP	: this.maxHP;
 		
 		this._delayBeforeRegen = 1;
 		this._timeSinceLastDamage = this._delayBeforeRegen;
+		
+		this._deathTrigger = false;
 		
 		if (super.setup) super.setup(options);
 	}
 	
 	damage(lostHP) {
 		this._timeSinceLastDamage = 0;
-		this.HP -= lostHP;
-		if (this.HP < 0) {
-			this.HP = 0;
-			this.destroy(false);
+		if (this.maxHP > 0) {
+			this.HP -= lostHP;
+			if (this.HP < 0) {
+				this.HP = 0;
+				this._deathTrigger = true;
+			}
 		}
 	}
 	
 	update(deltaMS) {
 		let deltaS = deltaMS * 0.001;
 		
-		if (this._timeSinceLastDamage < this._delayBeforeRegen) {
-			let temp = this._timeSinceLastDamage + deltaS;
-			if (temp > this._delayBeforeRegen) {
-				this._timeSinceLastDamage = this._delayBeforeRegen;
-				deltaS = temp - this._delayBeforeRegen; // Get overflow for HP calc, I guess.
-			}
-			else { this._timeSinceLastDamage = temp; }
-		}
+		if (this._deathTrigger) {this.destroy(false); }
 		
-		if (this._timeSinceLastDamage == this._delayBeforeRegen && this.HP < this.maxHP) {
-			this.HP += 20 * deltaS; // That's right! It regens 20HP a second! Yikes!
-			if (this.HP > this.maxHP) { this.HP = this.maxHP; }
+		if (this.maxHP > 0) {
+			if (this._timeSinceLastDamage < this._delayBeforeRegen) {
+				let temp = this._timeSinceLastDamage + deltaS;
+				if (temp > this._delayBeforeRegen) {
+					this._timeSinceLastDamage = this._delayBeforeRegen;
+					deltaS = temp - this._delayBeforeRegen; // Get overflow for HP calc, I guess.
+				}
+				else { this._timeSinceLastDamage = temp; }
+			}
+			
+			if (this._timeSinceLastDamage == this._delayBeforeRegen && this.HP < this.maxHP) {
+				this.HP += 20 * deltaS; // That's right! It regens 20HP a second! Yikes!
+				if (this.HP > this.maxHP) { this.HP = this.maxHP; }
+			}
 		}
 		
 		if (super.update) super.update(deltaMS);
@@ -184,6 +192,164 @@ prefabs.mixins['c_ramp_convex'] = (superclass) => class extends superclass {
 	}
 }
 
+prefabs.mixins['door_wall'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		let colInd = (bitA & 0x06) >>> 1;
+		
+		if (colInd === 1) { opts.colour = 'red'; }
+		else if (colInd === 2) { opts.colour = 'green'; }
+		else if (colInd === 3) { opts.colour = 'blue'; }
+		else { opts.colour = 'white'; }
+		
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this.colour = (options.colour != null) ? options.colour : 'white';
+		
+		if (this.colour === 'red') { this.tint = 0xff0000; }
+		else if (this.colour === 'green') { this.tint = 0x00ff00; }
+		else if (this.colour === 'blue') { this.tint = 0x0000ff; }
+		else {
+			this.colour = 'white';
+			this.tint = 0xffffff;
+		}
+		
+		this.keyAssigned = false;
+		
+		this.sprites.children[0].tint = this.tint;
+	}
+	
+	destroy(immediate) {
+		visuals.door_key_death(this.GP, this.position, this.colour);
+		
+		super.destroy(immediate);
+	}
+}
+
+prefabs.mixins['door_key'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		let colInd = (bitA & 0x06) >>> 1;
+		
+		if (colInd === 1) { opts.colour = 'red'; }
+		else if (colInd === 2) { opts.colour = 'green'; }
+		else if (colInd === 3) { opts.colour = 'blue'; }
+		else { opts.colour = 'white'; }
+		
+		opts.maxHP = 20;
+		
+		opts.keyCount = bitB;
+		
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this.colour = (options.colour != null) ? options.colour : 'white';
+		
+		if (this.colour === 'red') { this.tint = 0xff0000; }
+		else if (this.colour === 'green') { this.tint = 0x00ff00; }
+		else if (this.colour === 'blue') { this.tint = 0x0000ff; }
+		else {
+			this.colour = 'white';
+			this.tint = 0xffffff;
+		}
+		
+		//this._trailColour = this.tint;
+		
+		this.keyCount = (options.keyCount != null) ? options.keyCount : 0;
+		this._deathTrigger = false;
+		
+		this.sprites.children[0].tint = this.tint;
+	}
+	
+	update(deltaMS) {
+		if (super.update) super.update(deltaMS);
+	}
+	
+	destroy(immediate) {
+		visuals.door_key_death(this.GP, this.position, this.colour);
+		
+		// Get all doors, find valid ones, order by relative distance.
+		let sameColour = [],
+			multiColour = [];
+		
+		// Get valid options
+		let allDoors = this.GP.getObjectsOfType('door_wall', true);
+		if (this.colour === 'white') {
+			allDoors.forEach((element) => {
+				if (element.keyAssigned) { return; }
+				
+				if (element.colour === 'white') { sameColour.push(element); }
+				else { multiColour.push(element); }
+			});
+		}
+		else {
+			allDoors.forEach((element) => {
+				if (element.keyAssigned) { return; }
+				
+				if (element.colour === this.colour) { sameColour.push(element); }
+				else if (element.colour === 'white') { multiColour.push(element); }
+			});
+		}
+		
+		let leftOvers = (sameColour.length < this.keyCount),
+			overflow = (sameColour.length + multiColour.length < this.keyCount);
+		
+		if (overflow) {this.keyCount = sameColour.length + multiColour.length; }
+		
+		// Sort the options
+		let myPos = this.position;
+		sameColour.sort((a, b) => {
+			let aRel = a.position.clone().sub(myPos);
+			let bRel = b.position.clone().sub(myPos);
+			return (aRel.lengthSquared() - bRel.lengthSquared());
+		});
+		
+		if (leftOvers) {
+			multiColour.sort((a, b) => {
+				let aRel = a.position.clone().sub(myPos);
+				let bRel = b.position.clone().sub(myPos);
+				return (aRel.lengthSquared() - bRel.lengthSquared());
+			});
+		}
+		
+		// Spawn proj_key instances.
+		let angle = 0,
+			relAng = utils.TAU / this.keyCount,
+			tint = (this.colour === 'white') ? 0xdddddd : this.tint;
+		for (let i = 0; this.keyCount > 0 && i < sameColour.length; i++) {
+			sameColour[i].keyAssigned = true;
+			let proj = this.GP.makeObject('proj_key', null, myPos, angle, {
+				colour:	this.colour,
+				tint:	tint,
+				target:	sameColour[i]
+			});
+			
+			this.keyCount--;
+			angle += relAng;
+		}
+		for (let i = 0; this.keyCount > 0 && i < multiColour.length; i++) {
+			multiColour[i].keyAssigned = true;
+			let proj = this.GP.makeObject('proj_key', null, myPos, angle, {
+				colour:	this.colour,
+				tint:	tint,
+				target:	multiColour[i]
+			});
+			
+			this.keyCount--;
+			angle += relAng;
+		}
+		
+		super.destroy(immediate);
+	}
+}
+
 /*
 prefabs.mixins['player_jumpfield'] = (superclass) => class extends superclass {
 	setup(options) {
@@ -225,6 +391,9 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		this.sprites.body = this.sprites.children[0]; // Order may be changed post-setup according to z-height, so make a permanent link.
 		this.sprites.jumpField = this.sprites.children[1];
 		this.sprites.pullField = this.sprites.children[2];
+		
+		// Field checks
+		this._field_kill_applicable = true;
 		
 		// Build weapons
 		this.currentWeapon = null;
@@ -450,9 +619,11 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 					
 					let relative = elemPos.clone().sub(posM);
 					if (relative.lengthSquared() <= jumpRangeSquared) {
+						let otherFIF = (element.gameobject != null) ? element.gameobject.fieldImpFac : 1;
+						
 						let attrForce = 3 * deltaS;
-						let playerImpPow = otherStatic ? 200 * attrForce : elemMass * attrForce;
-						let otherImpPow = mass * attrForce;
+						let playerImpPow = otherStatic ? 200 * attrForce * this.fieldImpFac : elemMass * attrForce * this.fieldImpFac;
+						let otherImpPow = mass * attrForce * otherFIF;
 						
 						let playerImp = relative.clone();
 						playerImp.normalize();
@@ -502,7 +673,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 				let foundBodies = [];
 				this.GP.world.queryAABB(aabb, (fixture) => {
 					// If an applicable target, and not already on the list, add to list.
-					if (fixture.m_filterCategoryBits & 0xfff4) {
+					if (fixture.m_filterCategoryBits & 0xffb4) {
 						let body = fixture.getBody();
 						let isSubAssembly = false;
 						
@@ -529,9 +700,11 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 					
 					let relative = elemPos.clone().sub(posM);
 					if (relative.lengthSquared() <= pullRangeSquared) {
+						let otherFIF = (element.gameobject != null) ? element.gameobject.fieldImpFac : 1;
+						
 						let attrForce = 2 * deltaS;
-						let playerImpPow = otherStatic ? 100 * attrForce : elemMass * attrForce;
-						let otherImpPow = mass * attrForce;
+						let playerImpPow = otherStatic ? 100 * attrForce * this.fieldImpFac : elemMass * attrForce * this.fieldImpFac;
+						let otherImpPow = mass * attrForce * otherFIF;
 						
 						let playerImp = relative.clone();
 						playerImp.normalize();
@@ -550,20 +723,20 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		
 		// Torque
 		let angVel = this.body.getAngularVelocity();
-		if (left && !right && angVel < (6 * utils.PI)) { this.body.applyTorque(2 * deltaMS, true); }
-		if (right && !left && angVel > (-6 * utils.PI)) { this.body.applyTorque(-2 * deltaMS, true); }
+		if (left && !right && angVel < (6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(2 * deltaMS * this.fieldImpFac, true); }
+		if (right && !left && angVel > (-6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(-2 * deltaMS * this.fieldImpFac, true); }
 		if (left && right) {
 			// brake
 			if (angVel > 0) {
 				let factor = 2;
 				if (angVel < 2) { factor = angVel; }
-				this.body.applyTorque(-factor * deltaMS, true);
+				this.body.applyTorque(-factor * deltaMS * this.fieldImpFac, true);
 			}
 			
 			if (angVel < 0) {
 				let factor = 2;
 				if (angVel > -2) { factor = -angVel; }
-				this.body.applyTorque(factor * deltaMS, true);
+				this.body.applyTorque(factor * deltaMS * this.fieldImpFac, true);
 			}
 		}
 		
@@ -590,7 +763,15 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 	destroy(options) {
 		utils.setCursorIcon(this.GP, "white");
 		
-		//if (super.destroy) super.destroy(options);
+		if (super.destroy) super.destroy(options);
+	}
+	
+	destructor(options) {
+		if (this.shotgun) this.shotgun.destroy(true);
+		if (this.launcher) this.shotgun.destroy(true);
+		if (this.tesla) this.shotgun.destroy(true);
+		
+		// TODO: inform gameplay?
 	}
 }
 
@@ -792,8 +973,10 @@ prefabs.mixins['weapon_shotgun'] = (superclass) => class extends superclass {
 			let myPos = this.position;
 			let myRot = this.rotation;
 			
-			let pelletImpStr = 75;
-			let playerImpStr = 30;
+			let fif = this.player.fieldImpFac;
+			
+			let pelletImpStr = 75 * fif;
+			let playerImpStr = 30 * fif;
 			let halfAngle = ((1 - (this.charge / this.chargeMax)) * (utils.PI/18)) + (utils.PI/36); // Angle somewhere between 5 and 15 degrees, proportional to charge.
 			
 			let imp, offset, spawnPos, pellet, plImp;
@@ -908,11 +1091,14 @@ prefabs.mixins['weapon_launcher'] = (superclass) => class extends superclass {
 		if (this.clip > 0) {
 			let myPos = this.position;
 			if (this.charge === 0) { this.charge = 1; }
-			this.GP.makeObject('proj_launcher', null, myPos, this.rotation, {charge: this.charge, chargeMax: this.chargeMax});
-			let imp = Vec2(-Math.cos(this.rotation), -Math.sin(this.rotation)).mul(50);
-			this.player.body.applyLinearImpulse(imp, this.player.body.getPosition(), true);
-			// TODO: Effects? Sound?
-			//console.log('Launcher says "BANG!"');
+			let proj = this.GP.makeObject('proj_launcher', null, myPos, this.rotation, {charge: this.charge, chargeMax: this.chargeMax});
+			
+			let plImp = Vec2(Math.cos(this.rotation), Math.sin(this.rotation)).mul(this.player.fieldImpFac),			
+				prImp = plImp.clone().mul(150);
+			plImp.mul(-50);
+			
+			this.player.body.applyLinearImpulse(plImp, this.player.body.getPosition(), true);
+			proj.body.applyLinearImpulse(prImp, proj.body.getPosition(), true);
 			
 			this.clip--;
 			if (this.clip === 0 && this.GP.settings.autoReload) { this.reload(); }
@@ -1059,9 +1245,6 @@ prefabs.mixins['proj_launcher'] = (superclass) => class extends superclass {
 		this.sprites.body = this.sprites.children[0]; // Order may be changed post-setup according to z-height, so make a permanent link.
 		this.sprites.chargeRead = this.sprites.children[1];
 		
-		let imp = Vec2(Math.cos(this.rotation), Math.sin(this.rotation)).mul(150);
-		this.body.applyLinearImpulse(imp, this.body.getPosition(), true);
-		
 		this.hitWall = false;
 		
 		this._trailColour = 0xff6600;
@@ -1117,7 +1300,7 @@ prefabs.mixins['proj_launcher'] = (superclass) => class extends superclass {
 		let foundBodies = [];
 		this.GP.world.queryAABB(aabb, (fixture) => {
 			// If an applicable target, and not already on the list, add to list.
-			if (fixture.m_filterCategoryBits & 0x0015) {
+			if (fixture.m_filterCategoryBits & 0xff15) {
 				let body = fixture.getBody();
 				let isSubAssembly = false;
 				
@@ -1143,7 +1326,7 @@ prefabs.mixins['proj_launcher'] = (superclass) => class extends superclass {
 			if (relative.lengthSquared() <= blastRangeSquared) {
 				let ratio = 1 - (relative.length() / blastRange);
 				ratio = (ratio < 0.5) ? 0.5 : ratio;
-				let power = ratio * 100;
+				let power = ratio * 100 * this.fieldImpFac;
 				let imp = relative.clone();
 				imp.normalize();
 				imp.mul(power);
@@ -1241,22 +1424,24 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 			relativeAngle = Math.atan2(relative.y, relative.x);
 		
 		// Damage
-		bestTarget.damage(2);
+		bestTarget.damage(3);
 		
 		// Visuals
 		let vis = new visuals.tesla_beam(this.GP, this.position, dest);
 		
 		// Impulse
 		let otherMassPos = otherBody.getPosition().clone().add(otherBody.getLocalCenter()),
-			otherMass = otherBody.getMass();
+			otherMass = otherBody.getMass(),
+			otherFIF = (otherBody.gameobject != null) ? otherBody.gameobject.fieldImpFac : 1;
 			
 		let myMassPos = myBody.getPosition().clone().add(myBody.getLocalCenter()),
-			myMass = myBody.getMass();
+			myMass = myBody.getMass(),
+			myFIF = (myBody.gameobject != null) ? myBody.gameobject.fieldImpFac : 1;;
 		
 		let otherStatic = otherMass === 0,
 			attrForce = 5,
-			myImpPow = otherStatic ? 200 * attrForce : otherMass * attrForce,
-			otherImpPow = myMass * attrForce;
+			myImpPow = otherStatic ? 200 * attrForce * myFIF : otherMass * attrForce * myFIF,
+			otherImpPow = myMass * attrForce * otherFIF;
 		
 		let myImp = relative.clone();
 		myImp.normalize();
@@ -1291,6 +1476,70 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 	}
 }
 
+prefabs.mixins['proj_key'] = (superclass) => class extends superclass {
+	setup(options) {
+		this.colour = options.colour;
+		this.tint = options.tint;
+		this.target = options.target;
+		
+		this.sprites.children[0].tint = this.tint;
+		
+		this._trailThickness = 0.25;
+		this._trailLifespan	= 0.5;
+		this._trailColour = this.tint;
+		this._trailAlpha = 0.5;
+		
+		let facing = Vec2(Math.cos(this.rotation) * 25, Math.sin(this.rotation) * 25);
+		this.body.applyLinearImpulse(facing, this.position, true);
+		
+		this.visual = new visuals.proj_key(this);
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		let deltaS = deltaMS * 0.001,
+			myPos = this.position,
+			myRot = this.rotation,
+			destPos = this.target.position,
+			relative = destPos.clone().sub(myPos),
+			relAng = Math.atan2(relative.y, relative.x),
+			deltaAng = utils.bearingDelta(myRot, relAng);
+		
+		/*let torque,
+			angVel = this.body.getAngularVelocity();
+		
+		if (angVel > (utils.PI / 4)) { torque = -(utils.PI / 8) * deltaS; }
+		else if (angVel < -(utils.PI / 4)) { torque = (utils.PI / 8) * deltaS; }
+		else { torque = (deltaAng > 0) ? deltaS * 5 : deltaS * -5; }
+				
+		this.body.applyTorque(torque, true);*/
+		
+		let linVel = this.body.getLinearVelocity().clone();
+		linVel.normalize();
+		linVel.mul(deltaS * -10);
+			/*linVelAng = Math.atan2(linVel.y, linVel.x),
+			deltaLinVelAng = utils.bearingDelta(relAng, linVelAng);*/
+			
+		/*let factor = ((Math.abs(deltaLinVelAng) / utils.PI) * 0.5) + 0.5;
+		factor *= deltaS * 5;*/
+			
+		let facing = relative.clone();
+		facing.normalize();
+		facing.mul(deltaS * 20).add(linVel);
+		this.body.applyLinearImpulse(facing, myPos, true);
+		
+		if (super.update) super.update(deltaMS);
+	}
+	
+	destroy(immediate) {
+		this.visual.stopEmitting();
+		
+		super.destroy(immediate);
+	}
+}
+
+
 //	***
 //	Define gameplay prefabs.
 //	***
@@ -1304,8 +1553,11 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
  
  *	16	:	0x0010	:	debris / gibs
  *	32	:	0x0020	:	enviroment
- *	64	:	0x0040	:	enviro hazards
+ *	64	:	0x0040	:	enviro fields
  *	128	:	0x0080	:	enemy sensors
+ 
+ *	256	:	0x0100	:	interactables
+ *	512	:	0x0200	:	doors
 */
 
 //	***
@@ -1430,10 +1682,188 @@ prefabs.c_ramp_convex = {
 		type: 'static'//,
 		//active: false
 	},
-	fixtures: [
-
-	],
+	fixtures: [],
 	mixins: [ 'loading_90rot', 'loading_scale1to4', 'c_ramp_convex' ]
+};
+
+prefabs.door_wall = {
+	name: "door_wall",
+	tags: ['static', 'terrain', 'door'],
+	zIndex: 36,
+	sprites: [
+		{
+			tex: "door_wall.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'Block',
+			shape: planck.Box(0.5, 0.5),
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0220,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: ['door_wall']
+};
+
+prefabs.door_key = {
+	name: "door_key",
+	tags: ['static', 'gameplay', 'door', 'interactables', 'takes_damage'],
+	zIndex: 35,
+	sprites: [
+		{
+			tex: "door_key.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0.0//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'Key',
+			shape: planck.Circle(0.5),
+			
+			density: 20.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0300,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'door_key', 'takes_damage' ]
+};
+
+prefabs.field_kill = {
+	name: "field_kill",
+	tags: ['static', 'field'],
+	zIndex: 30,
+	sprites: [
+		{
+			tex: "__rect",
+			tint: 0xff0000,
+			alpha: 0.5,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Box(0.5, 0.5),
+			
+			isSensor: true,
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0040
+			//filterMaskBits: 0x0000
+		}
+	],
+	mixins: []
+};
+
+prefabs.field_acc = {
+	name: "field_acc",
+	tags: ['static', 'field'],
+	zIndex: 31,
+	sprites: [
+		{
+			tex: "__rect",
+			tint: 0x00ff00,
+			alpha: 0.5,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Box(0.5, 0.5),
+			
+			isSensor: true,
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0040
+			//filterMaskBits: 0x0000
+		}
+	],
+	mixins: []
+};
+
+prefabs.field_dec = {
+	name: "field_dec",
+	tags: ['static', 'field'],
+	zIndex: 32,
+	sprites: [
+		{
+			tex: "__rect",
+			tint: 0x0000ff,
+			alpha: 0.5,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Box(0.5, 0.5),
+			
+			isSensor: true,
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0040
+			//filterMaskBits: 0x0000
+		}
+	],
+	mixins: []
 };
 
 //	***
@@ -1489,7 +1919,7 @@ prefabs.player = {
 			restitution: 0.25,
 			
 			filterCategoryBits: 0x0001,
-			filterMaskBits: 0x006c
+			filterMaskBits: 0xff6c
 		}
 	],
 	mixins: [ 'leavestrail', 'player' ]
@@ -1613,7 +2043,7 @@ prefabs.proj_shotgun = {
 			restitution: 0.1,
 			
 			filterCategoryBits: 0x0002,
-			filterMaskBits: 0x006e
+			filterMaskBits: 0xff2e
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_shotgun' ]
@@ -1659,7 +2089,7 @@ prefabs.proj_launcher = {
 			restitution: 0.95,
 			
 			filterCategoryBits: 0x0002,
-			filterMaskBits: 0x006e
+			filterMaskBits: 0xff2e
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_launcher' ]
@@ -1682,6 +2112,41 @@ prefabs.proj_tesla = {
 		}
 	],
 	mixins: [ 'proj_tesla' ]
+}
+
+prefabs.proj_key = {
+	name: "proj_key",
+	tags: ['dynamic', 'door' ],
+	zIndex: 15,
+	sprites: [
+		{
+			tex: "__circle",
+			tint: 0xffffff,
+			alpha: 0.5,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.25, 0.25),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'projectile',
+			shape: planck.Circle(0.125),
+			
+			density: 50,
+			friction: 0.0,
+			restitution: 0.9,
+			
+			filterCategoryBits: 0x0010,
+			filterMaskBits: 0x0200
+		}                   
+	],
+	mixins: [ 'leavestrail', 'proj_key' ]
 }
 
 prefabs.gibs_launcher = {
@@ -1769,9 +2234,9 @@ prefabs.map = {
 	3:	'c_ramp_concave',
 	4:	'c_ramp_convex',
 	5:	'door_wall',
-	6:	'kill_field',
-	7:	'acc_field',
-	8:	'dec_field',
+	6:	'field_kill',
+	7:	'field_acc',
+	8:	'field_dec',
 	
 	//	Gameplay
 	10:	'player_spawn',

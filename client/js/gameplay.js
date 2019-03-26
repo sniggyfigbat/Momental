@@ -7,6 +7,7 @@
 const uuid = require('uuid');
 const mix = require('./mixinbuilder');
 const prefabs = require('./prefabs');
+const visuals = require('./visuals');
 
 'use strict'
 
@@ -82,26 +83,86 @@ function Gameplay(world, app, IH, settings) {
 	
 	this.objClasses = {};
 	
-	world.on('begin-contact', (contact) => {
+	world.on('pre-solve', (contact) => {
+		// Admin / Setup:
+		
 		let fixtureA = contact.getFixtureA();
 		let fixtureB = contact.getFixtureB();
+		
+		let catA = fixtureA.getFilterCategoryBits();
+		let catB = fixtureB.getFilterCategoryBits();
 
 		let bodyA = contact.getFixtureA().getBody();
 		let bodyB = contact.getFixtureB().getBody();
 		
-		let goA = bodyA.gameobject;
-		let goB = bodyB.gameobject;
+		let isGOA = (bodyA.gameobject != null);
+		let isGOB = (bodyB.gameobject != null);
 		
-		if (goA == null || goB == null) {
+		let goA = (isGOA) ? bodyA.gameobject : null;
+		let goB = (isGOB) ? bodyB.gameobject : null;
+		
+		let typeA = (isGOA) ? goA.type : null;
+		let typeB = (isGOB) ? goB.type : null;
+		
+		if (!isGOA && !isGOB) {
+			
+		}
+		else {
+			// proj_key
+			let aProjK = typeA === 'proj_key';
+			let bProjK = typeB === 'proj_key';
+			if (aProjK || bProjK) {
+				let projK = (aProjK) ? goA : goB,
+					other = (aProjK) ? goB : goA;
+				
+				if (projK.target === other) {
+					projK.destroy(false);
+					other.destroy(false);
+				}
+				else { contact.setEnabled(false); }
+			}
+		}
+	});
+	
+	world.on('begin-contact', (contact) => {
+		// Admin / Setup:
+		
+		let fixtureA = contact.getFixtureA();
+		let fixtureB = contact.getFixtureB();
+		
+		let catA = fixtureA.getFilterCategoryBits();
+		let catB = fixtureB.getFilterCategoryBits();
+
+		let bodyA = contact.getFixtureA().getBody();
+		let bodyB = contact.getFixtureB().getBody();
+		
+		let isGOA = (bodyA.gameobject != null);
+		let isGOB = (bodyB.gameobject != null);
+		
+		let goA = (isGOA) ? bodyA.gameobject : null;
+		let goB = (isGOB) ? bodyB.gameobject : null;
+		
+		let typeA = (isGOA) ? goA.type : null;
+		let typeB = (isGOB) ? goB.type : null;
+		
+		// Vars
+		
+		let aEnviro = catA & 0x0020;
+		let bEnviro = catB & 0x0020;
+		
+		let aTakesDamage = (isGOA) ? goA.hasTag('takes_damage') : false;
+		let bTakesDamage = (isGOB) ? goB.hasTag('takes_damage') : false;
+		
+		// Tests / Logic
+		
+		if (!isGOA && !isGOB) {
 			// Probably nothing?
 		}
 		else {
-			let aEnviro = fixtureA.getFilterCategoryBits() & 0x0020;
-			let bEnviro = fixtureB.getFilterCategoryBits() & 0x0020;
 			
 			// proj_shotgun
-			let aProjS = goA.type == 'proj_shotgun';
-			let bProjS = goB.type == 'proj_shotgun';
+			let aProjS = typeA === 'proj_shotgun';
+			let bProjS = typeB === 'proj_shotgun';
 			
 			if ((aProjS || bProjS) && (aEnviro || bEnviro) && (!aProjS || !bProjS)) {
 				// Ricochets
@@ -109,8 +170,7 @@ function Gameplay(world, app, IH, settings) {
 				projS._hasRicocheted = true;
 				if (projS._canRicochet) { projS.body.setGravityScale(0.5); }
 			}
-			let aTakesDamage = goA.hasTag('takes_damage');
-			let bTakesDamage = goB.hasTag('proj_shotgun');
+			
 			if ((aProjS || bProjS) && (!aProjS || !bProjS)) {
 				let projS = (aProjS) ? goA : goB;
 				let other = (aProjS) ? goB : goA;
@@ -119,18 +179,21 @@ function Gameplay(world, app, IH, settings) {
 				if (takesDamage) {
 					other.damage(15);
 					projS.destroy(false);
+					visuals.proj_shotgun_death(this, projS.position, true);
 				}
 				else {
 					let vel = this.relM2GU(projS.body.getLinearVelocity());
-					if (vel.lengthSquared() < 100) { projS.destroy(false); }
+					if (vel.lengthSquared() < 100) {
+						projS.destroy(false);
+						visuals.proj_shotgun_death(this, projS.position, false);
+					}
 				}
 			}
 			
-			// TODO: Damage / Deletion
 			
 			// proj_launcher
-			let aProjL = goA.type == 'proj_launcher';
-			let bProjL = goB.type == 'proj_launcher';
+			let aProjL = typeA === 'proj_launcher';
+			let bProjL = typeB === 'proj_launcher';
 			if ((aProjL || bProjL) && (aEnviro || bEnviro) && (!aProjL || !bProjL)) {
 				// One projectile, one wall. Kinky.
 				let projL = (aProjL) ? goA : goB;
@@ -145,6 +208,65 @@ function Gameplay(world, app, IH, settings) {
 					projL.desiredPos = projL.body.getPosition();
 				}
 			}
+			
+			
+			// field_kill
+			let aFieldK = typeA === 'field_kill';
+			let bFieldK = typeB === 'field_kill';
+			let aKillable = (goA != null) ? goA._field_kill_applicable : false;
+			let bKillable = (goB != null) ? goB._field_kill_applicable : false;
+			if (aFieldK && bKillable) { goB._fieldKillTrigger = true; }
+			if (bFieldK && aKillable) { goA._fieldKillTrigger = true; }
+			// ...
+		}
+	});
+	
+	world.on('post-solve', (contact, impulse) => {
+		// Admin / Setup:
+		
+		let totalNormalImpulse = 0;
+		impulse.normalImpulses.forEach((element) => { totalNormalImpulse += element; }); // I don't really understand how contact impulses work, so, fuck it.
+		
+		let fixtureA = contact.getFixtureA();
+		let fixtureB = contact.getFixtureB();
+		
+		let catA = fixtureA.getFilterCategoryBits();
+		let catB = fixtureB.getFilterCategoryBits();
+
+		let bodyA = contact.getFixtureA().getBody();
+		let bodyB = contact.getFixtureB().getBody();
+		
+		let isGOA = (bodyA.gameobject != null);
+		let isGOB = (bodyB.gameobject != null);
+		
+		let goA = (isGOA) ? bodyA.gameobject : null;
+		let goB = (isGOB) ? bodyB.gameobject : null;
+		
+		let typeA = (isGOA) ? goA.type : null;
+		let typeB = (isGOB) ? goB.type : null;
+		
+		// Vars
+		
+		/*let aEnviro = catA & 0x0020;
+		let bEnviro = catB & 0x0020;
+		
+		let aTakesDamage = (isGOA) ? goA.hasTag('takes_damage') : false;
+		let bTakesDamage = (isGOB) ? goB.hasTag('takes_damage') : false;*/
+		
+		// Tests / Logic
+
+		if (!isGOA && !isGOB) {
+			// Probably nothing?
+		}
+		else {
+			
+			// door_key
+			let aDoorK = typeA === 'door_key';
+			let bDoorK = typeB === 'door_key';
+			let aProjS = typeA === 'proj_shotgun';
+			let bProjS = typeB === 'proj_shotgun';
+			if (aDoorK && !bProjS && Math.abs(totalNormalImpulse) > 50) { goA._deathTrigger = true; }
+			if (bDoorK && !aProjS && Math.abs(totalNormalImpulse) > 50) { goB._deathTrigger = true; }
 			
 			// ...
 		}
@@ -293,6 +415,18 @@ Gameplay.prototype.object = class GameObject {
 		
 		this._markedForDeath = false;
 		this._midDestruction = false;
+		
+		// Field effects
+		this._field_kill_applicable = false;
+		this._field_acc_applicable = true;
+		this._field_dec_applicable = true;
+		
+		this._accelerated = false;
+		this._decelerated = false;
+		
+		this._fieldImpulseFactor = 1;
+		this._fieldVelFactor = 1;
+		this._fieldKillTrigger = false;
 	}
 	
 	get position() {
@@ -328,14 +462,69 @@ Gameplay.prototype.object = class GameObject {
 		if (this.sprites) { this.sprites.rotation = -R; }
 	}
 	
+	updateFieldLogic(deltaS) {
+		if (this.body == null || this.body.m_type === 'static') {
+			this._field_updatedThisTick = true;
+			return;
+		}
+		
+		this._accelerated = !this._field_acc_applicable;
+		this._decelerated = !this._field_dec_applicable;
+		for (let overlap = this.body.getContactList();
+			overlap != null &&
+			(!this._accelerated ||
+			!this._decelerated ||
+			!killed);
+			overlap = overlap.next) {
+			if (overlap.other.gameobject != null) {
+				let other = overlap.other.gameobject;
+				
+				if (other.type === 'field_acc') { this._accelerated = true; }
+				if (other.type === 'field_dec') { this._decelerated = true; }
+			}
+		}
+		
+		if (!this._field_kill_applicable) { this._fieldKillTrigger = false; }
+		if (!this._field_acc_applicable) { this._accelerated = false; }
+		if (!this._field_dec_applicable) { this._decelerated = false; }
+		
+		this._fieldImpulseFactor = 1;
+		this._fieldVelFactor = 0;
+
+		if (this._accelerated) {
+			this._fieldImpulseFactor += 1;
+			this._fieldVelFactor += 1.5;
+		}
+		if (this._decelerated) {
+			this._fieldImpulseFactor -= 0.5;
+			this._fieldVelFactor -= 0.9;
+		}
+		
+		this._fieldVelFactor *= deltaS;
+		this._fieldVelFactor += 1;
+		
+		if (this._fieldKillTrigger) { this.destroy(false); }
+	}
+	
+	get fieldImpFac() {
+		let copy = this._fieldImpulseFactor;
+		return copy;
+	}
+	
 	update( deltaMS ) {
-		// Literally just update sprites to match body.
+		// Update sprites to match body.
 		if ((this.body) && (this.sprites)) {
 			let bodPos = this.body.getPosition();
 			let sprPos = this.GP.absM2P(bodPos);
 			this.sprites.position.set(sprPos.x, sprPos.y);
 			let rot = this.body.getAngle();
 			this.sprites.rotation = -rot;
+		}
+		
+		if (this.body && this._fieldVelFactor !== 1) {
+			let linVel = this.body.getLinearVelocity(),
+				velSq = linVel.lengthSquared();
+			if (velSq < 400) { linVel.mul(this._fieldVelFactor); }
 		}
 	}
 	
@@ -580,6 +769,7 @@ Gameplay.prototype.makeObject = function(type, name, position, rotation, options
 		}
 		
 		// Run object's setup function, add it to appropriate array, then return it.
+		if (options == null) { options = {}; }
 		if (retObj.setup) { retObj.setup(options); }
 		if (!retObj.hasTag('subassembly')) {
 			if (bodyType == 'static') {this.staticObjects.push(retObj); } else { this.dynamicObjects.push(retObj); }
@@ -649,13 +839,13 @@ Gameplay.prototype.getObjectsOfType = function(type, areStatic) {
 	
 	if (this._spawnCounts[type] == null || this._spawnCounts[type] === 0) { return retObjs; }
 	
-	if (!areStatic === true) {
+	if (areStatic === false) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.type === type) { retObjs.push(element); }
 		})
 	}
 	
-	if (!areStatic === false) {
+	if (areStatic === true) {
 		this.staticObjects.forEach((element) => {
 			if (element.type === type) { retObjs.push(element); }
 		})
@@ -668,13 +858,13 @@ Gameplay.prototype.getObjectsOfName = function(name, areStatic) {
 	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
 	retObjs = [];
 	
-	if (!areStatic === true) {
+	if (areStatic === false) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.name === name) { retObjs.push(element); }
 		})
 	}
 	
-	if (!areStatic === false) {
+	if (areStatic === true) {
 		this.staticObjects.forEach((element) => {
 			if (element.name === name) { retObjs.push(element); }
 		})
@@ -687,13 +877,13 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
 	retObjs = [];
 	
-	if (!areStatic === true) {
+	if (areStatic === false) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.hasTag(tag)) { retObjs.push(element); }
 		})
 	}
 	
-	if (!areStatic === false) {
+	if (areStatic === true) {
 		this.staticObjects.forEach((element) => {
 			if (element.hasTag(tag)) { retObjs.push(element); }
 		})
@@ -721,6 +911,19 @@ Gameplay.prototype.update = function(deltaMS) {
 	let deltaS = deltaMS / 1000;
 	
 	this.world.step(deltaS);
+	
+	// Pre-update. I thought I'd end up using this way more than I have.
+	
+	this.dynamicObjects.forEach((element) => {
+		element.updateFieldLogic(deltaS);
+		if (element.preupdate) { element.preupdate(deltaMS); }
+	}, this);
+	
+	this.staticObjects.forEach((element) => {
+		if (element.preupdate) { element.preupdate(deltaMS); }		
+	}, this);
+	
+	// Update proper
 	
 	this.dynamicObjects.forEach((element) => {
 		if (element.update) { element.update(deltaMS); }	

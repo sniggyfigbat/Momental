@@ -2,7 +2,7 @@
 
 "circle_border.png":
 {
-	"frame": {"x":192,"y":64,"w":128,"h":128},
+	"frame": {"x":128,"y":208,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -10,15 +10,31 @@
 },
 "circle_side.png":
 {
-	"frame": {"x":64,"y":64,"w":128,"h":128},
+	"frame": {"x":0,"y":208,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
 	"sourceSize": {"w":128,"h":128}
 },
+"door_key.png":
+{
+	"frame": {"x":128,"y":64,"w":64,"h":64},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
+	"sourceSize": {"w":64,"h":64}
+},
+"door_wall.png":
+{
+	"frame": {"x":64,"y":128,"w":64,"h":64},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
+	"sourceSize": {"w":64,"h":64}
+},
 "enemy_charger_base.png":
 {
-	"frame": {"x":0,"y":64,"w":64,"h":80},
+	"frame": {"x":128,"y":128,"w":64,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":80},
@@ -26,7 +42,7 @@
 },
 "enemy_flier_base.png":
 {
-	"frame": {"x":448,"y":0,"w":64,"h":64},
+	"frame": {"x":0,"y":128,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -50,7 +66,7 @@
 },
 "enemy_walker_base.png":
 {
-	"frame": {"x":64,"y":0,"w":64,"h":64},
+	"frame": {"x":64,"y":64,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -58,7 +74,7 @@
 },
 "player_body.png":
 {
-	"frame": {"x":320,"y":0,"w":64,"h":64},
+	"frame": {"x":64,"y":0,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -74,7 +90,7 @@
 },
 "spawn_end_triangle.png":
 {
-	"frame": {"x":320,"y":64,"w":166,"h":144},
+	"frame": {"x":0,"y":336,"w":166,"h":144},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":166,"h":144},
@@ -82,7 +98,7 @@
 },
 "spawner_walker.png":
 {
-	"frame": {"x":256,"y":0,"w":64,"h":64},
+	"frame": {"x":0,"y":64,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -90,7 +106,7 @@
 },
 "terrain_curve_concave.png":
 {
-	"frame": {"x":256,"y":208,"w":256,"h":256},
+	"frame": {"x":0,"y":736,"w":256,"h":256},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":256,"h":256},
@@ -98,7 +114,7 @@
 },
 "terrain_curve_convex.png":
 {
-	"frame": {"x":0,"y":208,"w":256,"h":256},
+	"frame": {"x":0,"y":480,"w":256,"h":256},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":256,"h":256},
@@ -106,7 +122,7 @@
 },
 "terrain_ramp.png":
 {
-	"frame": {"x":384,"y":0,"w":64,"h":64},
+	"frame": {"x":192,"y":64,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -117,8 +133,8 @@
 	"version": "1.0",
 	"image": "gameplay.png",
 	"format": "RGBA8888",
-	"size": {"w":512,"h":464},
+	"size": {"w":256,"h":992},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:981cb9416a9dd87088aa8244e962ae31:62722eb308f3087fd94d785b4acd2f62:2f000f36c153dcd06e739670dfc91337$"
+	"smartupdate": "$TexturePacker:SmartUpdate:fef73b543802784f31b87640aa742903:80a30c9a352055cea293a507b49636d6:2f000f36c153dcd06e739670dfc91337$"
 }
 }
