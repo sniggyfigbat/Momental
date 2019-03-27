@@ -250,6 +250,8 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 	setup(options) {
 		if (super.setup) super.setup(options);
 		
+		this._field_kill_applicable = true;
+		
 		this.colour = (options.colour != null) ? options.colour : 'white';
 		
 		if (this.colour === 'red') { this.tint = 0xff0000; }
@@ -263,7 +265,6 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 		//this._trailColour = this.tint;
 		
 		this.keyCount = (options.keyCount != null) ? options.keyCount : 0;
-		this._deathTrigger = false;
 		
 		this.sprites.children[0].tint = this.tint;
 	}
@@ -272,7 +273,7 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 		if (super.update) super.update(deltaMS);
 	}
 	
-	destroy(immediate) {
+	destructor(options) {
 		visuals.door_key_death(this.GP, this.position, this.colour);
 		
 		// Get all doors, find valid ones, order by relative distance.
@@ -345,8 +346,6 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 			this.keyCount--;
 			angle += relAng;
 		}
-		
-		super.destroy(immediate);
 	}
 }
 
@@ -398,44 +397,10 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		// Build weapons
 		this.currentWeapon = null;
 		this.ammo = (options.startingAmmo != null) ? options.startingAmmo : 0;
-		if (options.hasShotgun == true) {
-			this.shotgun = this.GP.makeObject('weapon_shotgun', this.name + '_weapon_shotgun', this.position, 0, {
-				hasAmmo: !(options.shotgunStartsWithAmmo === false)
-			});
-			this.shotgun.player = this;
-			if (this.currentWeapon == null) {
-				this.currentWeapon = 'shotgun';
-				this.shotgun.active = true;
-				this._trailColour = this.shotgun.readyTint;
-			}
-			else { this.shotgun.active = false; }
-		}
 		
-		if (options.hasLauncher == true) {
-			this.launcher = this.GP.makeObject('weapon_launcher', this.name + '_weapon_launcher', this.position, 0, {
-				hasAmmo: !(options.launcherStartsWithAmmo === false)
-			});
-			this.launcher.player = this;
-			if (this.currentWeapon == null) {
-				this.currentWeapon = 'launcher';
-				this.launcher.active = true;
-				this._trailColour = this.launcher.readyTint;
-			}
-			else { this.launcher.active = false; }
-		}
-		
-		if (options.hasTesla == true) {
-			this.tesla = this.GP.makeObject('weapon_tesla', this.name + '_weapon_tesla', this.position, 0, {
-				hasAmmo: !(options.teslaStartsWithAmmo === false)
-			});
-			this.tesla.player = this;
-			if (this.currentWeapon == null) {
-				this.currentWeapon = 'tesla';
-				this.tesla.active = true;
-				this._trailColour = this.tesla.readyTint;
-			}
-			else { this.tesla.active = false; }
-		}
+		if (options.hasShotgun == true) { enableShotgun(options.shotgunStartsWithAmmo); }
+		if (options.hasLauncher == true) { enableLauncher(options.launcherStartsWithAmmo); }
+		if (options.hasTesla == true) { enableTesla(options.teslaStartsWithAmmo); }
 		
 		// Build Jumpfields
 		this.hasJumpField = (options.hasJumpField == true);
@@ -460,6 +425,66 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		this.pullFieldRange = 3;
 		
 		if (super.setup) super.setup(options);
+	}
+	
+	enableJumpField() { this.hasJumpField = true; }
+	
+	enablePullField() { this.hasPullField = true; }
+	
+	enableShotgun(startsWithAmmo) {
+		if (this.shotgun != null) { return; }
+		
+		this.shotgun = this.GP.makeObject('weapon_shotgun', this.name + '_weapon_shotgun', this.position, 0, {
+			hasAmmo: !(startsWithAmmo === false)
+		});
+		this.shotgun.player = this;
+		if (this.currentWeapon == null) {
+			this.currentWeapon = 'shotgun';
+			this.shotgun.active = true;
+			this._trailColour = this.shotgun.readyTint;
+			
+			if (this.trail) { this.trail.setColour(this.shotgun.readyTint); }
+		}
+		else { this.shotgun.active = false; }
+	}
+	
+	enableLauncher(startsWithAmmo) {
+		if (this.launcher != null) { return; }
+		
+		this.launcher = this.GP.makeObject('weapon_launcher', this.name + '_weapon_launcher', this.position, 0, {
+			hasAmmo: !(startsWithAmmo === false)
+		});
+		this.launcher.player = this;
+		if (this.currentWeapon == null) {
+			this.currentWeapon = 'launcher';
+			this.launcher.active = true;
+			this._trailColour = this.launcher.readyTint;
+			
+			if (this.trail) { this.trail.setColour(this.launcher.readyTint); }
+		}
+		else { this.launcher.active = false; }
+	}
+	
+	enableTesla(startsWithAmmo) {
+		if (this.tesla != null) { return; }
+		
+		this.tesla = this.GP.makeObject('weapon_tesla', this.name + '_weapon_tesla', this.position, 0, {
+			hasAmmo: !(startsWithAmmo === false)
+		});
+		this.tesla.player = this;
+		if (this.currentWeapon == null) {
+			this.currentWeapon = 'tesla';
+			this.tesla.active = true;
+			this._trailColour = this.tesla.readyTint;
+			
+			if (this.trail) { this.trail.setColour(this.tesla.readyTint); }
+		}
+		else { this.tesla.active = false; }
+	}
+	
+	addAmmo(amount) {
+		this.ammo += amount;
+		if (this.ammo > 6) this.ammo = 6;
 	}
 	
 	update(deltaMS) {
@@ -592,7 +617,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 				let foundBodies = [];
 				this.GP.world.queryAABB(aabb, (fixture) => {
 					// If an applicable target, and not already on the list, add to list.
-					if (fixture.m_filterCategoryBits & 0xffb4) {
+					if (fixture.m_filterCategoryBits & 0xfbb4) {
 						let body = fixture.getBody();
 						let isSubAssembly = false;
 						
@@ -673,7 +698,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 				let foundBodies = [];
 				this.GP.world.queryAABB(aabb, (fixture) => {
 					// If an applicable target, and not already on the list, add to list.
-					if (fixture.m_filterCategoryBits & 0xffb4) {
+					if (fixture.m_filterCategoryBits & 0xfbb4) {
 						let body = fixture.getBody();
 						let isSubAssembly = false;
 						
@@ -723,20 +748,20 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		
 		// Torque
 		let angVel = this.body.getAngularVelocity();
-		if (left && !right && angVel < (6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(2 * deltaMS * this.fieldImpFac, true); }
-		if (right && !left && angVel > (-6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(-2 * deltaMS * this.fieldImpFac, true); }
+		if (left && !right && angVel < (6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(30 * this.fieldImpFac, true); }
+		if (right && !left && angVel > (-6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(-30 * this.fieldImpFac, true); }
 		if (left && right) {
 			// brake
 			if (angVel > 0) {
 				let factor = 2;
 				if (angVel < 2) { factor = angVel; }
-				this.body.applyTorque(-factor * deltaMS * this.fieldImpFac, true);
+				this.body.applyTorque(-factor * 15 * this.fieldImpFac, true);
 			}
 			
 			if (angVel < 0) {
 				let factor = 2;
 				if (angVel > -2) { factor = -angVel; }
-				this.body.applyTorque(factor * deltaMS * this.fieldImpFac, true);
+				this.body.applyTorque(factor * 15 * this.fieldImpFac, true);
 			}
 		}
 		
@@ -768,10 +793,10 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 	
 	destructor(options) {
 		if (this.shotgun) this.shotgun.destroy(true);
-		if (this.launcher) this.shotgun.destroy(true);
-		if (this.tesla) this.shotgun.destroy(true);
+		if (this.launcher) this.launcher.destroy(true);
+		if (this.tesla) this.tesla.destroy(true);
 		
-		// TODO: inform gameplay?
+		this.GP.trigger_player_death(this.position);
 	}
 }
 
@@ -1300,7 +1325,7 @@ prefabs.mixins['proj_launcher'] = (superclass) => class extends superclass {
 		let foundBodies = [];
 		this.GP.world.queryAABB(aabb, (fixture) => {
 			// If an applicable target, and not already on the list, add to list.
-			if (fixture.m_filterCategoryBits & 0xff15) {
+			if (fixture.m_filterCategoryBits & 0xfb15) {
 				let body = fixture.getBody();
 				let isSubAssembly = false;
 				
@@ -1365,7 +1390,7 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 		let bestHeur = 0, bestTarget = null;
 		this.GP.world.queryAABB(aabb, (fixture) => {
 			// If an applicable target, and not already on the list, add to list.
-			if (fixture.m_filterCategoryBits & 0xff04) {
+			if (fixture.m_filterCategoryBits & 0xfb04) {
 				let body = fixture.getBody();
 				let valid = false;
 				
@@ -1539,6 +1564,384 @@ prefabs.mixins['proj_key'] = (superclass) => class extends superclass {
 	}
 }
 
+prefabs.mixins['proj_trigger'] = (superclass) => class extends superclass {
+	setup(options) {
+		this.effectType = options.effectType;
+		this.tint = options.tint;
+		this.tintString = options.tintString;
+		this.target = options.target;
+		this.targetFunction = options.targetFunction;
+		this.targetFunctionParameters = options.targetFunctionParameters;
+		
+		this.sprites.children[0].tint = this.tint;
+		
+		this._trailThickness = 0.25;
+		this._trailLifespan	= 0.5;
+		this._trailColour = this.tint;
+		this._trailAlpha = 0.5;
+		
+		let facing = Vec2(Math.cos(this.rotation) * 25, Math.sin(this.rotation) * 25);
+		this.body.applyLinearImpulse(facing, this.position, true);
+		
+		this.visual = new visuals.proj_trigger(this);
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		if (this.target == null || this.target._markedForDeath) {
+			this.destroy(false);
+			if (super.update) super.update(deltaMS);
+			return;
+		} 
+		
+		let deltaS = deltaMS * 0.001,
+			myPos = this.position,
+			myRot = this.rotation,
+			destPos = this.target.position,
+			relative = destPos.clone().sub(myPos),
+			relAng = Math.atan2(relative.y, relative.x),
+			deltaAng = utils.bearingDelta(myRot, relAng);
+		
+		/*let torque,
+			angVel = this.body.getAngularVelocity();
+		
+		if (angVel > (utils.PI / 4)) { torque = -(utils.PI / 8) * deltaS; }
+		else if (angVel < -(utils.PI / 4)) { torque = (utils.PI / 8) * deltaS; }
+		else { torque = (deltaAng > 0) ? deltaS * 5 : deltaS * -5; }
+				
+		this.body.applyTorque(torque, true);*/
+		
+		let linVel = this.body.getLinearVelocity().clone();
+		linVel.normalize();
+		linVel.mul(deltaS * -10);
+			/*linVelAng = Math.atan2(linVel.y, linVel.x),
+			deltaLinVelAng = utils.bearingDelta(relAng, linVelAng);*/
+			
+		/*let factor = ((Math.abs(deltaLinVelAng) / utils.PI) * 0.5) + 0.5;
+		factor *= deltaS * 5;*/
+			
+		let facing = relative.clone();
+		facing.normalize();
+		facing.mul(deltaS * 20).add(linVel);
+		this.body.applyLinearImpulse(facing, myPos, true);
+		
+		if (super.update) super.update(deltaMS);
+	}
+	
+	trigger(other) {
+		if (this.target == null || this.target._markedForDeath) {
+			this.destroy(false);
+			return;
+		}
+		
+		if (this.targetFunctionParameters != null) { this.target[this.targetFunction](this.targetFunctionParameters); }
+		else { this.target[this.targetFunction](); }
+		this.destroy(false);
+	}
+	
+	destroy(immediate) {
+		this.visual.stopEmitting();
+		visuals.proj_trigger_death(this.GP, this.position, this.tintString);
+		
+		super.destroy(immediate);
+	}
+}
+
+
+//	***
+//	General Gameplay mixins
+//	***
+
+prefabs.mixins['pull_bobble'] = (superclass) => class extends superclass {
+	setup(options) {
+		this.home = this.position.clone();
+		this._stiffness = 20;
+		
+		options.maxHP = -1;
+		
+		this.visual = new visuals.pull_bobble_tether(this);
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		let pos = this.position;
+		let posM = this.body.getPosition();
+		if (pos.x != this.home.x && pos.y != this.home.y) {
+			// Apply a force pulling it back home.
+			// Uses Hooke's law.
+			let relative = this.home.clone().sub(pos),
+				disp = relative.normalize(); // Normalize returns length prior to normalization. Useful! Sometimes. Mostly a pain in the arse, actually.
+				
+			let force = this._stiffness * disp;
+			relative.mul(force);
+			this.body.applyForce(relative, posM);
+		}
+		
+		// Friction
+		let linVel = this.body.getLinearVelocity();
+		if (linVel.lengthSquared() != 0) {
+			let friction = linVel.clone().mul(-5);
+			this.body.applyForce(friction, posM);
+		}
+		
+		// Angular friction
+		let rotVel = this.body.getAngularVelocity();
+		if (rotVel != 0) {
+			rotVel *= -1;
+			this.body.applyTorque(rotVel);
+		}
+		
+		this.visual.updatePosition(pos, this.home);
+		
+		if (super.update) super.update(deltaMS);
+	}
+	
+	destructor(options) { this.visual._markedForDeath = true; }
+}
+
+prefabs.mixins['player_unlock'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		utils.translatePlayerOptions(opts, bitA, bitB);
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._field_kill_applicable = true;
+		
+		this.effects = {
+			count: 0,
+			hasJumpField:			options.hasJumpField,
+			hasPullField:			options.hasPullField,
+			hasShotgun:				options.hasShotgun,
+			shotgunStartsWithAmmo:	options.shotgunStartsWithAmmo,
+			hasLauncher:			options.hasLauncher,
+			launcherStartsWithAmmo:	options.launcherStartsWithAmmo,
+			hasTesla:				options.hasTesla,
+			teslaStartsWithAmmo:	options.teslaStartsWithAmmo
+			//startingAmmo: options.startingAmmo
+		};
+		
+		// There's almost certainly a smart way of doing this. This isn't it.
+		if (this.effects.hasJumpField)				this.effects.count++;
+		if (this.effects.hasPullField)				this.effects.count++;
+		if (this.effects.hasShotgun)				this.effects.count++;
+		if (this.effects.hasLauncher)				this.effects.count++;
+		if (this.effects.hasTesla)					this.effects.count++;
+	}
+	
+	destructor(options) {
+		let effectsTriggered = 0,
+			subAngle = utils.TAU / this.effects.count,
+			spawnAngle = this.rotation,
+			myPos = this.position.clone(),
+			player = this.GP.getObjectsOfType('player', false)[0],
+			particleCount = Math.ceil(10 / this.effects.count);
+		
+		if (player == null || player._markedForDeath) {
+			visuals.powerup_death(this.GP, myPos, 10, '000000');
+			return;
+		}
+		
+		if (this.effects.hasJumpField) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'jumpFields',
+				tint:			0x7fffff,
+				tintString:		'7fffff',
+				target:			player,
+				targetFunction:	'enableJumpField',
+				targetFunctionParameters: null
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, '7fffff');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasPullField) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'jumpFields',
+				tint:			0xd97fff,
+				tintString:		'd97fff',
+				target:			player,
+				targetFunction:	'enablePullField',
+				targetFunctionParameters: null
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, 'd97fff');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasShotgun) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'shotgun',
+				tint:			0x0000ff,
+				tintString:		'0000ff',
+				target:			player,
+				targetFunction:	'enableShotgun',
+				targetFunctionParameters: this.effects.shotgunStartsWithAmmo
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, '0000ff');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasLauncher) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'launcher',
+				tint:			0xff0000,
+				tintString:		'ff0000',
+				target:			player,
+				targetFunction:	'enableLauncher',
+				targetFunctionParameters: this.effects.launcherStartsWithAmmo
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, 'ff0000');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasTesla) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'tesla',
+				tint:			0x00bf00,
+				tintString:		'00bf00',
+				target:			player,
+				targetFunction:	'enableTesla',
+				targetFunctionParameters: this.effects.teslaStartsWithAmmo
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, '00bf00');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (effectsTriggered != this.effects.count) { "WARNING: Detected a player_unlock instance spawn effect count mismatch." }
+	}
+}
+
+prefabs.mixins['player_ammo'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		utils.translatePlayerOptions(opts, bitA, bitB);
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._field_kill_applicable = true;
+		
+		this.effects = {
+			/*count: 0,
+			hasJumpField:			options.hasJumpField,
+			hasPullField:			options.hasPullField,
+			hasShotgun:				options.hasShotgun,
+			shotgunStartsWithAmmo:	options.shotgunStartsWithAmmo,
+			hasLauncher:			options.hasLauncher,
+			launcherStartsWithAmmo:	options.launcherStartsWithAmmo,
+			hasTesla:				options.hasTesla,
+			teslaStartsWithAmmo:	options.teslaStartsWithAmmo*/
+			startingAmmo: options.startingAmmo
+		};
+	}
+	
+	destructor(options) {
+		let	myPos = this.position,
+			player = this.GP.getObjectsOfType('player', false)[0],
+			angle = this.rotation,
+			angleSeg = utils.TAU / this.effects.startingAmmo;
+		
+		if (player == null || player._markedForDeath) {
+			visuals.powerup_death(this.GP, myPos, 10, '000000');
+			return;
+		}
+		
+		for (let i = 0; i < this.effects.startingAmmo; i++) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, angle, {
+				effectType:		'addAmmo',
+				tint:			0x000000,
+				tintString:		'000000',
+				target:			player,
+				targetFunction:	'addAmmo',
+				targetFunctionParameters: 1
+			});
+			
+			angle += angleSeg;
+		}
+		
+		visuals.powerup_death(this.GP, myPos, 10, '000000');
+	}
+}
+
+prefabs.mixins['player_spawn'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		utils.translatePlayerOptions(opts, bitA, bitB);
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this.visual = visuals.player_spawn_and_goal(this.GP, this.position, 180);
+		this.GP.makeObject('player', null, this.position, 0, options);
+	}
+	
+	destructor(options) {
+		this.visual.destroy();
+		if (super.destructor) { super.destructor(options); }
+	}
+}
+
+prefabs.mixins['player_goal'] = (superclass) => class extends superclass {
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this.visual = visuals.player_spawn_and_goal(this.GP, this.position, 0);
+	}
+	
+	update(deltaMS) {
+		let playerOverlap = false;
+		for (let overlap = this.body.getContactList();
+			overlap != null && !playerOverlap;
+			overlap = overlap.next) {
+			if (overlap.other.gameobject != null) {
+				if (overlap.other.gameobject.type === 'player') { playerOverlap = true; }
+			}
+		}
+		
+		if (playerOverlap) { this.GP.trigger_player_reached_goal(this); }
+		if (super.update) super.update(deltaMS);
+	}
+	
+	destructor(options) {
+		this.visual.destroy();
+		if (super.destructor) { super.destructor(options); }
+	}
+}
+
+//	_______________________________________________________
 
 //	***
 //	Define gameplay prefabs.
@@ -1558,6 +1961,7 @@ prefabs.mixins['proj_key'] = (superclass) => class extends superclass {
  
  *	256	:	0x0100	:	interactables
  *	512	:	0x0200	:	doors
+ *	1024:	0x0400	:	trigger projectiles
 */
 
 //	***
@@ -1722,7 +2126,7 @@ prefabs.door_wall = {
 
 prefabs.door_key = {
 	name: "door_key",
-	tags: ['static', 'gameplay', 'door', 'interactables', 'takes_damage'],
+	tags: ['dynamic', 'gameplay', 'door', 'interactables', 'takes_damage'],
 	zIndex: 35,
 	sprites: [
 		{
@@ -2043,7 +2447,7 @@ prefabs.proj_shotgun = {
 			restitution: 0.1,
 			
 			filterCategoryBits: 0x0002,
-			filterMaskBits: 0xff2e
+			filterMaskBits: 0xfb2e
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_shotgun' ]
@@ -2089,7 +2493,7 @@ prefabs.proj_launcher = {
 			restitution: 0.95,
 			
 			filterCategoryBits: 0x0002,
-			filterMaskBits: 0xff2e
+			filterMaskBits: 0xfb2e
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_launcher' ]
@@ -2142,11 +2546,46 @@ prefabs.proj_key = {
 			friction: 0.0,
 			restitution: 0.9,
 			
-			filterCategoryBits: 0x0010,
+			filterCategoryBits: 0x0400,
 			filterMaskBits: 0x0200
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_key' ]
+}
+
+prefabs.proj_trigger = {
+	name: "proj_trigger",
+	tags: ['dynamic', 'trigger' ],
+	zIndex: 15,
+	sprites: [
+		{
+			tex: "__circle",
+			tint: 0xffffff,
+			alpha: 0.5,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.25, 0.25),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'projectile',
+			shape: planck.Circle(0.125),
+			
+			density: 50,
+			friction: 0.0,
+			restitution: 0.9,
+			
+			filterCategoryBits: 0x0400,
+			//filterMaskBits: 0x0200
+		}                   
+	],
+	mixins: [ 'leavestrail', 'proj_trigger' ]
 }
 
 prefabs.gibs_launcher = {
@@ -2182,7 +2621,7 @@ prefabs.gibs_launcher = {
 			restitution: 0.5,
 			
 			filterCategoryBits: 0x0010,
-			filterMaskBits: 0xffff
+			filterMaskBits: 0xfbff
 		}                   
 	],
 	mixins: []
@@ -2222,6 +2661,252 @@ prefabs.test = {
 }
 
 //	***
+//	General Gameplay
+//	***
+
+prefabs.pull_bobble = {
+	name: "pull_bobble",
+	tags: ['dynamic', 'gameplay', 'interactables', 'takes_damage'],
+	zIndex: 36,
+	sprites: [
+		{
+			tex: "pull_bobble.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0.0
+	},
+	fixtures: [
+		{
+			name: 'Bobble',
+			shape: planck.Circle(0.5),
+			
+			density: 20.0,
+			friction: 0.5,
+			restitution: 0.75,
+			
+			filterCategoryBits: 0x0120,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'takes_damage', 'pull_bobble' ]
+};
+
+prefabs.player_unlock = {
+	name: "player_unlock",
+	tags: ['dynamic', 'gameplay', 'powerup', 'interactables', 'takes_damage'],
+	zIndex: 30,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10,
+			points: [
+				new PIXI.Point(0, 0.5),
+				new PIXI.Point(0.5, 0),
+				new PIXI.Point(0, -0.5),
+				new PIXI.Point(-0.5, 0)
+			]
+		},
+		{
+			tex: "__triangle",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.375, 0.375),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 15,
+			points: [
+				new PIXI.Point(0, 0.5),
+				new PIXI.Point(0.5, 0),
+				new PIXI.Point(0, -0.5),
+				new PIXI.Point(-0.5, 0)
+			]
+		},
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Polygon([
+				Vec2(0, 0.5),
+				Vec2(0.5, 0),
+				Vec2(0, -0.5),
+				Vec2(-0.5, 0)
+			]),
+			
+			density: 20.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0100,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'takes_damage', 'player_unlock' ]
+};
+
+prefabs.player_ammo = {
+	name: "player_ammo",
+	tags: ['dynamic', 'gameplay', 'powerup', 'interactables', 'takes_damage'],
+	zIndex: 30,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10,
+			points: [
+				new PIXI.Point(0, 0.5),
+				new PIXI.Point(0.5, 0),
+				new PIXI.Point(0, -0.5),
+				new PIXI.Point(-0.5, 0)
+			]
+		},
+		{
+			tex: "__circle",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.25, 0.25),
+			pos: Vec2(0, 0.1875),
+			rot: 0,
+			zIndex: 15
+		},
+		{
+			tex: "__circle",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.25, 0.25),
+			pos: Vec2(0, -0.1875),
+			rot: 0,
+			zIndex: 15
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Polygon([
+				Vec2(0, 0.5),
+				Vec2(0.5, 0),
+				Vec2(0, -0.5),
+				Vec2(-0.5, 0)
+			]),
+			
+			density: 20.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0100,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'takes_damage', 'player_ammo' ]
+};
+
+prefabs.player_spawn = {
+	name: "player_spawn",
+	tags: ['static', 'spawnpoint'],
+	maxCount: 1,
+	zIndex: 15,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0xff81ff,
+			alpha: 1,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: utils.PI
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Polygon(
+				Vec2(0, -1.5),
+				Vec2(2.25 * 0.57735026919, 0.75),
+				Vec2(2.25 * -0.57735026919, 0.75)
+			),
+			
+			isSensor: true,
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0000
+			//filterMaskBits: 0x0000
+		}
+	],
+	mixins: [ 'player_spawn' ]
+};
+
+prefabs.player_goal = {
+	name: "player_goal",
+	tags: ['static', 'exit'],
+	zIndex: 15,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0xff81ff,
+			alpha: 1,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Polygon(
+				Vec2(0, 1.5),
+				Vec2(2.25 * 0.57735026919, -0.75),
+				Vec2(2.25 * -0.57735026919, -0.75)
+			),
+			
+			isSensor: true,
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0040
+			//filterMaskBits: 0x0000
+		}
+	],
+	mixins: [ 'player_goal' ]
+};
+
+//	***
 //	Level creation / reading
 //	***
 
@@ -2250,8 +2935,8 @@ prefabs.map = {
 	
 	//	Powerups
 	20:	'player_unlock',
-	21:	'player_ammo',
-	22:	'player_powerup'
+	21:	'player_ammo'
+	//22:	'player_powerup'
 }
 
 module.exports = prefabs;

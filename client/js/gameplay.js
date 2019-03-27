@@ -29,6 +29,33 @@ function Gameplay(world, app, IH, settings) {
 		meterOrigin:		Vec2(0, 0)		// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
 	}
 	
+	// Handler functions
+	this.trigger_end_victory	= null;
+	this.trigger_end_defeat		= null;
+	
+	this._gameEnded = false;
+	this._afterEndTime = 0;
+	this._endVictory = false;
+	this.trigger_player_death = (playerPosGU) => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 1000;
+			this._endVictory = false;
+			
+			visuals.player_death(this, playerPosGU.clone());
+		}
+	}
+	this.trigger_player_reached_goal = (goal) => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 3000;
+			this._endVictory = true;
+			
+			this.getObjectsOfType("player")[0].destroy(false);
+			visuals.player_ascension(this, goal.position);
+		}
+	}
+	
 	// Box2D world.	
 	console.assert(world != null, 'ERROR: Gameplay object created with null world!'); 
 	this.world = world;
@@ -104,7 +131,7 @@ function Gameplay(world, app, IH, settings) {
 		let typeA = (isGOA) ? goA.type : null;
 		let typeB = (isGOB) ? goB.type : null;
 		
-		if (!isGOA && !isGOB) {
+		if (!isGOA || !isGOB) {
 			
 		}
 		else {
@@ -121,6 +148,22 @@ function Gameplay(world, app, IH, settings) {
 				}
 				else { contact.setEnabled(false); }
 			}
+			
+			
+			// proj_trigger
+			let aProjT = typeA === 'proj_trigger';
+			let bProjT = typeB === 'proj_trigger';
+			if (aProjT && isGOB) {
+				if (goA.target === goB) { goA.trigger(goB); }
+				contact.setEnabled(false);
+			}
+			if (bProjT && isGOA) {
+				if (goB.target === goA) { goB.trigger(goA); }
+				contact.setEnabled(false);
+			}
+			
+			
+			// ...
 		}
 	});
 	
@@ -155,7 +198,7 @@ function Gameplay(world, app, IH, settings) {
 		
 		// Tests / Logic
 		
-		if (!isGOA && !isGOB) {
+		if (!isGOA || !isGOB) {
 			// Probably nothing?
 		}
 		else {
@@ -255,18 +298,18 @@ function Gameplay(world, app, IH, settings) {
 		
 		// Tests / Logic
 
-		if (!isGOA && !isGOB) {
+		if (!isGOA || !isGOB) {
 			// Probably nothing?
 		}
 		else {
 			
-			// door_key
-			let aDoorK = typeA === 'door_key';
-			let bDoorK = typeB === 'door_key';
+			// smashables (door_key, player_unlock, player_ammo)
+			let aSmash = typeA === 'door_key' || typeA === 'player_unlock' || typeA === 'player_ammo';
+			let bSmash = typeB === 'door_key' || typeB === 'player_unlock' || typeB === 'player_ammo';
 			let aProjS = typeA === 'proj_shotgun';
 			let bProjS = typeB === 'proj_shotgun';
-			if (aDoorK && !bProjS && Math.abs(totalNormalImpulse) > 50) { goA._deathTrigger = true; }
-			if (bDoorK && !aProjS && Math.abs(totalNormalImpulse) > 50) { goB._deathTrigger = true; }
+			if (aSmash && !bProjS && Math.abs(totalNormalImpulse) > 50) { goA.destroy(false); }
+			if (bSmash && !aProjS && Math.abs(totalNormalImpulse) > 50) { goB.destroy(false); }
 			
 			// ...
 		}
@@ -284,7 +327,7 @@ Gameplay.prototype.loadLevel = function(level) {
 	// Each pixel is actually 4 bytes, or 32 bits:
 	
 	//	x5:		0-32 type id
-	//	x11:	options bits. Usually the first two are rotation.
+	//	x11:	options bits. Often the first two are rotation, the next two are sometime scale.
 	
 	// Allows for two objects per space.
 	
@@ -611,14 +654,16 @@ Gameplay.prototype.makeObject = function(type, name, position, rotation, options
 				return;
 			}
 			
-			let tint	= (element.tint != null)	? element.tint		: 0xffffff;
-			let alpha	= (element.alpha != null)	? element.alpha		: 1;
-			let anchor	= (element.anchor != null)	? element.anchor	: Vec2(0.5, 0.5);
-			let scale	= (element.scale != null)	? element.scale		: Vec2(0.25, 0.25);
-			let pos		= (element.pos != null)		? element.pos		: Vec2(0, 0);
-			let rot		= (element.rot != null)		? element.rot		: 0;
-			let zIndex	= (element.zIndex != null)	? element.zIndex	: 0;
-			let visible	= (element.visible != null)	? element.visible	: true;
+			let tint	= (element.tint != null)	? element.tint			: 0xffffff;
+			let alpha	= (element.alpha != null)	? element.alpha			: 1;
+			let anchor	= (element.anchor != null)	? element.anchor		: Vec2(0.5, 0.5);
+			let scale	= (element.scale != null)	? element.scale.clone()	: Vec2(0.25, 0.25);
+			let pos		= (element.pos != null)		? element.pos.clone()	: Vec2(0, 0);
+			let rot		= (element.rot != null)		? element.rot			: 0;
+			let zIndex	= (element.zIndex != null)	? element.zIndex		: 0;
+			let visible	= (element.visible != null)	? element.visible		: true;
+			
+			pos.mul(this.settings.pixelScaleFactor);
 			
 			let newSpr = null;
 			if (element.tex === '__rect') {
@@ -839,13 +884,13 @@ Gameplay.prototype.getObjectsOfType = function(type, areStatic) {
 	
 	if (this._spawnCounts[type] == null || this._spawnCounts[type] === 0) { return retObjs; }
 	
-	if (areStatic === false) {
+	if (!(areStatic === true)) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.type === type) { retObjs.push(element); }
 		})
 	}
 	
-	if (areStatic === true) {
+	if (!(areStatic === false)) {
 		this.staticObjects.forEach((element) => {
 			if (element.type === type) { retObjs.push(element); }
 		})
@@ -858,13 +903,13 @@ Gameplay.prototype.getObjectsOfName = function(name, areStatic) {
 	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
 	retObjs = [];
 	
-	if (areStatic === false) {
+	if (!(areStatic === true)) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.name === name) { retObjs.push(element); }
 		})
 	}
 	
-	if (areStatic === true) {
+	if (!(areStatic === false)) {
 		this.staticObjects.forEach((element) => {
 			if (element.name === name) { retObjs.push(element); }
 		})
@@ -877,13 +922,13 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
 	retObjs = [];
 	
-	if (areStatic === false) {
+	if (!(areStatic === true)) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.hasTag(tag)) { retObjs.push(element); }
 		})
 	}
 	
-	if (areStatic === true) {
+	if (!(areStatic === false)) {
 		this.staticObjects.forEach((element) => {
 			if (element.hasTag(tag)) { retObjs.push(element); }
 		})
@@ -897,6 +942,16 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 //	***
 
 Gameplay.prototype.update = function(deltaMS) {
+	if (this._gameEnded != false) {
+		this._afterEndTime -= deltaMS;
+		if (this._afterEndTime < 0) {
+			if (this._endVictory) { this.trigger_end_victory(); }
+			else { this.trigger_end_defeat(); }
+		}
+	}
+	
+	
+	
 	// Update cursor stage position
 	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
 	this.cursorStage.position.set(mousePos.x, mousePos.y);

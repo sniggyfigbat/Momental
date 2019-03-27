@@ -491,7 +491,7 @@ visuals.trail = class {
 		
 		// Sprite
 		this.sprite = new PIXI.Container();
-		this.sprite.zIndex = 5;
+		this.sprite.zIndex = 20;
 		parent.GP.stage.addChild(this.sprite);
 		
 		// Points
@@ -1173,6 +1173,620 @@ visuals.proj_key = class {
 	}
 }
 
+visuals.pull_bobble_tether = class {
+	constructor(bobble) {
+		this.alpha = 0.5;
+		this.thickness = bobble.GP.relGU2P(0.125);
+		this.bobble = bobble;
+		
+		// Admin
+		this._lifetimed = false;
+		this._lifetimer = -1;
+		this._markedForDeath = false;
+		bobble.GP.visuals.push(this);
+		
+		// Setup
+		this.sprite = new PIXI.Graphics();
+		this.sprite.zIndex = 9;
+		bobble.GP.stage.addChild(this.sprite);
+		
+		// Toggles
+		this._drewLastTick = false;
+	}
+	
+	updatePosition(bobblePos, tetherPos) {
+		if (this._drewLastTick) { this.sprite.clear(); }
+		
+		if (bobblePos.x == tetherPos.x && bobblePos.y == tetherPos.y) {
+			// Don't bother drawing, bobble is exactly on top of tether.
+			this._drewLastTick = false;
+			return;
+		}
+		
+		this._drewLastTick = true;
+		
+		// Draw cool purple crackly line
+		let GP = this.bobble.GP;
+		let relative = tetherPos.clone().sub(bobblePos),
+			dist = relative.length(),
+			relN = relative.clone();
+		relN.normalize();
+			
+		// Gen Points and draw beam
+		let pointCount = Math.ceil(dist),
+			subSegment = dist / pointCount;
+			
+		this.sprite.lineStyle(this.thickness, 0xd7afff, this.alpha, 0.5);
+		this.sprite.beginFill(0xd7afff, 0);
+		
+		let startP = GP.absGU2P(bobblePos);
+		this.sprite.moveTo(startP.x, startP.y); // Why the flying fuck does PIXI not let me input points into half its damn calls?
+		for (let i = 1; i < pointCount; i++) {
+			let offset = Vec2(-relN.y, relN.x),
+				offsetFactor = (Math.random() - 0.5) * 0.5;
+			offset.mul(offsetFactor);
+			let temp = relN.clone().mul(i * subSegment).add(offset);
+			temp = bobblePos.clone().add(temp);
+			temp = GP.absGU2P(temp);
+			this.sprite.lineTo(temp.x, temp.y);
+		}
+		let endP = GP.absGU2P(tetherPos);
+		this.sprite.lineTo(endP.x, endP.y);
+		this.sprite.endFill();
+		
+		// Put a nice diamond at the tether point.
+		this.sprite.beginFill(0xd7afff, 1);
+		this.sprite.drawCircle(endP.x, endP.y, this.thickness);
+	}
+	
+	update(deltaS) {}
+	
+	destroy() {
+		this.sprite.parent.removeChild(this.sprite);
+		this.sprite.destroy({children:true, texture:false, baseTexture:false});
+	}
+}
+
+visuals.proj_trigger = class {
+	constructor(projectile) {
+		this.parent = projectile;
+		
+		let posP = projectile.GP.absGU2P(projectile.position);
+		
+		// Why doesn't PIXI particles take normal hex values? We may never know...
+		let colour = projectile.tintString;
+		
+		let scale = utils.getSpriteScale(projectile.GP, 128, .25),
+			radius = projectile.GP.relGU2P(1);
+		
+		this.emitter = new PIXI.particles.Emitter(
+			projectile.GP.particleStageLower,
+			particleTex['equilateral.png'],
+			{
+				alpha: {
+					list: [
+						{ value: 1, time: 0 },
+						{ value: 0, time: 1 }
+					],
+					isStepped: false
+				},
+				scale: {
+					list: [
+						{ value: scale, time: 0 },
+						{ value: scale, time: 1 }
+					],
+					minimumScaleMultiplier: 0.25
+				},
+				color: {
+					list: [
+						{ value: colour, time: 0 },
+						{ value: colour, time: 1 }
+					],
+					isStepped: false
+				},
+				speed: {
+					list: [
+						{ value: 0, time: 0 },
+						{ value: 0, time: 1 }
+					],
+					isStepped: false
+				},
+				startRotation: { min: 0, max: 360 },
+				rotationSpeed: { min: 0, max: 0 },
+				lifetime: { min: 0.5, max: 1 },
+				frequency: 0.1,
+				spawnChance: 10,
+				particlesPerWave: 1,
+				emitterLifetime: -1,
+				maxParticles: 1000,
+				pos: { x: posP.x, y: posP.y },
+				addAtBack: false,
+				spawnType: "circle",
+				spawnCircle: {
+					x: 0,
+					y: 0,
+					r: radius
+				}
+			}
+		);
+		
+		this._lifetimed = false; // Marked as being auto-destroyable upon completion.
+		this._lifetimer = -1; // emitterLifetime + lifetime.max + a bit.
+		this._markedForDeath = false;
+		projectile.GP.visuals.push(this);
+	}
+	
+	update(deltaS) {
+		if (this.parent != null && !this.parent._markedForDeath) {
+			let posP = this.parent.GP.absGU2P(this.parent.position);
+			this.emitter.updateSpawnPos(posP.x, posP.y);
+		}
+		this.emitter.update(deltaS);
+	}
+	
+	stopEmitting() {
+		this.emitter.emit = false;
+		this._lifetimed = true; // Marked as being auto-destroyable upon completion.
+		this._lifetimer = 5; // emitterLifetime + lifetime.max + a bit.
+	}
+	
+	destroy() {
+		this.emitter.destroy();
+	}
+}
+
+visuals.proj_trigger_death = function(GP, posGU, tintString) {
+	let posP = GP.absGU2P(posGU);
+	let colour = tintString;
+	
+	let scale = utils.getSpriteScale(GP, 128, .25),
+		speed = GP.relGU2P(0.5);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 1, time: 0.5 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: colour, time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed * 2, time: 0 },
+					{ value: speed, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.75,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.5, max: 0.5 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: 8,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 2; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.powerup_death = function(GP, posGU, particleCount, tintString) {
+	let posP = GP.absGU2P(posGU);
+	let colour = tintString;
+	
+	let scale = utils.getSpriteScale(GP, 128, .5),
+		speed = GP.relGU2P(2);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: '000000', time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.25,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.5, max: 1 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.2,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 2; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.player_spawn_and_goal = function(GP, posGU, rotationOffset) {
+	let posP = GP.absGU2P(posGU);
+	let colour = 'ff81ff';
+	let minRot = rotationOffset - 5,
+		maxRot = rotationOffset + 5;
+	
+	let scale = utils.getSpriteScale(GP, 128, 3);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageLower,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 1, time: 0.5 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.95
+			},
+			color: {
+				list: [
+					{ value: colour, time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: 0, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			startRotation: { min: minRot, max: maxRot },
+			rotationSpeed: { min: -3, max: 3 },
+			lifetime: { min: 3.5, max: 3.5 },
+			frequency: 1.5,
+			spawnChance: 10,
+			particlesPerWave: 1,
+			emitterLifetime: -1,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = false; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = -1; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+	
+	return emitter;
+}
+
+visuals.player_ascension = function(GP, posGU) {
+	let posP = GP.absGU2P(posGU);
+	let colour = 'ff81ff';
+	
+	let scale = utils.getSpriteScale(GP, 128, .5),
+		startSpeed = GP.relGU2P(10),
+		midSpeed = GP.relGU2P(0.5),
+		endSpeed = GP.relGU2P(20);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 1, time: 0.75 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: colour, time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: startSpeed, time: 0 },
+					{ value: midSpeed, time: 0.5 },
+					{ value: endSpeed, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.75,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: -15, max: 15 },
+			lifetime: { min: 2.5, max: 2.5 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: 50,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.player_death = function(GP, posGU) {
+	let posP = GP.absGU2P(posGU);
+	let red		= 'ff0000',
+		green	= '00ff00',
+		blue	= '0000ff';
+	
+	let scale = utils.getSpriteScale(GP, 128, .5),
+		speed = GP.relGU2P(5),
+		particleCount = 15;
+	
+	// Red
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['diamondfade.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0.75, time: 0.7 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.75
+			},
+			color: {
+				list: [
+					{ value: red, time: 0 },
+					{ value: '000000', time: 0.5 },
+					{ value: '000000', time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.875,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.75, max: 0.75 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+	
+	// Green
+	emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['diamondfade.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0.75, time: 0.7 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.75
+			},
+			color: {
+				list: [
+					{ value: green, time: 0 },
+					{ value: '000000', time: 0.5 },
+					{ value: '000000', time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.875,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.75, max: 0.75 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+	
+	// Blue
+	emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['diamondfade.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0.75, time: 0.7 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.75
+			},
+			color: {
+				list: [
+					{ value: blue, time: 0 },
+					{ value: '000000', time: 0.5 },
+					{ value: '000000', time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.875,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.75, max: 0.75 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
 module.exports = visuals;
 
 /***/ }),
@@ -1407,6 +2021,14 @@ function loadLevel(levelData) {
 	
 	GP.loadLevel(resources["TestLevel.png"].texture);
 	
+	GP.trigger_end_victory = () => {
+		console.log('Hooray! You win!');
+	}
+	
+	GP.trigger_end_defeat = () => {
+		console.log('Oh dear! You died!');
+	}
+	
 	/*for (let i = 0; i < 34; i++) {
 		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
 	}
@@ -1429,8 +2051,8 @@ function loadLevel(levelData) {
 	let wall2 = GP.makeObject('wall', 'wall02', Vec2(1.5, 8.5), 0);
 	let wall3 = GP.makeObject('wall', 'wall03', Vec2(2.5, 8.5), 0);
 	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);*/
-	let player = GP.makeObject('player', 'player02', Vec2(18.5, 21.5), 0, {
-		hasJumpField: true,
+	//let player = GP.makeObject('player', 'player02', Vec2(18.5, 21.5), 0, {
+		/*hasJumpField: true,
 		hasPullField: true,
 		//canSlowTime: true, Don't have enough bits for this. Assume always true.
 		
@@ -1441,8 +2063,21 @@ function loadLevel(levelData) {
 		hasTesla: true,
 		teslaStartsWithAmmo: true,
 		
-		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?
-		});
+		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?*/
+		
+		/*hasJumpField: false,
+		hasPullField: false,
+		//canSlowTime: true, Don't have enough bits for this. Assume always true.
+		
+		hasShotgun: false,
+		shotgunStartsWithAmmo: false,
+		hasLauncher: false,
+		launcherStartsWithAmmo: false,
+		hasTesla: false,
+		teslaStartsWithAmmo: false,
+		
+		startingAmmo: 0	// 3 bits, 0-7. In-game-max of 6?
+		});*/
 	/*//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
 	
 	let wall5 = GP.makeObject('wall', 'wall05', Vec2(4.5, 8.75), utils.PI/6);
@@ -1567,6 +2202,22 @@ utils.setCursorIcon = (GP, colourName) => {
 	GP.app.renderer.plugins.interaction.setCursorMode(colourName);
 }
 
+utils.translatePlayerOptions = (options, bitA, bitB) => {
+	options.hasJumpField = (bitA & 0x04) != 0;
+	options.hasPullField = (bitA & 0x02) != 0;
+	//canSlowTime: true, Don't have enough bits for this. Assume always true.
+	
+	options.hasShotgun = (bitA & 0x01) != 0;
+	options.shotgunStartsWithAmmo = (bitB & 0x80) != 0;
+	options.hasLauncher = (bitB & 0x40) != 0;
+	options.launcherStartsWithAmmo = (bitB & 0x20) != 0;
+	options.hasTesla = (bitB & 0x10) != 0;
+	options.teslaStartsWithAmmo = (bitB & 0x08) != 0;
+	
+	options.startingAmmo = (bitB & 0x07);	// 3 bits, 0-7. In-game-max of 6?
+	if (options.startingAmmo > 6) { options.startingAmmo = 6; }
+}
+
 module.exports = utils;
 
 /***/ }),
@@ -1602,6 +2253,33 @@ function Gameplay(world, app, IH, settings) {
 		levelSize:			Vec2(34, 34),	// In GU. Note, origin is in bottom left.
 		pixelOrigin:		Vec2(0, 34),	// In GU. PIXI's origin is in the top left of the screen, this is the location of that point in gameplay space.
 		meterOrigin:		Vec2(0, 0)		// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
+	}
+	
+	// Handler functions
+	this.trigger_end_victory	= null;
+	this.trigger_end_defeat		= null;
+	
+	this._gameEnded = false;
+	this._afterEndTime = 0;
+	this._endVictory = false;
+	this.trigger_player_death = (playerPosGU) => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 1000;
+			this._endVictory = false;
+			
+			visuals.player_death(this, playerPosGU.clone());
+		}
+	}
+	this.trigger_player_reached_goal = (goal) => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 3000;
+			this._endVictory = true;
+			
+			this.getObjectsOfType("player")[0].destroy(false);
+			visuals.player_ascension(this, goal.position);
+		}
 	}
 	
 	// Box2D world.	
@@ -1679,7 +2357,7 @@ function Gameplay(world, app, IH, settings) {
 		let typeA = (isGOA) ? goA.type : null;
 		let typeB = (isGOB) ? goB.type : null;
 		
-		if (!isGOA && !isGOB) {
+		if (!isGOA || !isGOB) {
 			
 		}
 		else {
@@ -1696,6 +2374,22 @@ function Gameplay(world, app, IH, settings) {
 				}
 				else { contact.setEnabled(false); }
 			}
+			
+			
+			// proj_trigger
+			let aProjT = typeA === 'proj_trigger';
+			let bProjT = typeB === 'proj_trigger';
+			if (aProjT && isGOB) {
+				if (goA.target === goB) { goA.trigger(goB); }
+				contact.setEnabled(false);
+			}
+			if (bProjT && isGOA) {
+				if (goB.target === goA) { goB.trigger(goA); }
+				contact.setEnabled(false);
+			}
+			
+			
+			// ...
 		}
 	});
 	
@@ -1730,7 +2424,7 @@ function Gameplay(world, app, IH, settings) {
 		
 		// Tests / Logic
 		
-		if (!isGOA && !isGOB) {
+		if (!isGOA || !isGOB) {
 			// Probably nothing?
 		}
 		else {
@@ -1830,18 +2524,18 @@ function Gameplay(world, app, IH, settings) {
 		
 		// Tests / Logic
 
-		if (!isGOA && !isGOB) {
+		if (!isGOA || !isGOB) {
 			// Probably nothing?
 		}
 		else {
 			
-			// door_key
-			let aDoorK = typeA === 'door_key';
-			let bDoorK = typeB === 'door_key';
+			// smashables (door_key, player_unlock, player_ammo)
+			let aSmash = typeA === 'door_key' || typeA === 'player_unlock' || typeA === 'player_ammo';
+			let bSmash = typeB === 'door_key' || typeB === 'player_unlock' || typeB === 'player_ammo';
 			let aProjS = typeA === 'proj_shotgun';
 			let bProjS = typeB === 'proj_shotgun';
-			if (aDoorK && !bProjS && Math.abs(totalNormalImpulse) > 50) { goA._deathTrigger = true; }
-			if (bDoorK && !aProjS && Math.abs(totalNormalImpulse) > 50) { goB._deathTrigger = true; }
+			if (aSmash && !bProjS && Math.abs(totalNormalImpulse) > 50) { goA.destroy(false); }
+			if (bSmash && !aProjS && Math.abs(totalNormalImpulse) > 50) { goB.destroy(false); }
 			
 			// ...
 		}
@@ -1859,7 +2553,7 @@ Gameplay.prototype.loadLevel = function(level) {
 	// Each pixel is actually 4 bytes, or 32 bits:
 	
 	//	x5:		0-32 type id
-	//	x11:	options bits. Usually the first two are rotation.
+	//	x11:	options bits. Often the first two are rotation, the next two are sometime scale.
 	
 	// Allows for two objects per space.
 	
@@ -2186,14 +2880,16 @@ Gameplay.prototype.makeObject = function(type, name, position, rotation, options
 				return;
 			}
 			
-			let tint	= (element.tint != null)	? element.tint		: 0xffffff;
-			let alpha	= (element.alpha != null)	? element.alpha		: 1;
-			let anchor	= (element.anchor != null)	? element.anchor	: Vec2(0.5, 0.5);
-			let scale	= (element.scale != null)	? element.scale		: Vec2(0.25, 0.25);
-			let pos		= (element.pos != null)		? element.pos		: Vec2(0, 0);
-			let rot		= (element.rot != null)		? element.rot		: 0;
-			let zIndex	= (element.zIndex != null)	? element.zIndex	: 0;
-			let visible	= (element.visible != null)	? element.visible	: true;
+			let tint	= (element.tint != null)	? element.tint			: 0xffffff;
+			let alpha	= (element.alpha != null)	? element.alpha			: 1;
+			let anchor	= (element.anchor != null)	? element.anchor		: Vec2(0.5, 0.5);
+			let scale	= (element.scale != null)	? element.scale.clone()	: Vec2(0.25, 0.25);
+			let pos		= (element.pos != null)		? element.pos.clone()	: Vec2(0, 0);
+			let rot		= (element.rot != null)		? element.rot			: 0;
+			let zIndex	= (element.zIndex != null)	? element.zIndex		: 0;
+			let visible	= (element.visible != null)	? element.visible		: true;
+			
+			pos.mul(this.settings.pixelScaleFactor);
 			
 			let newSpr = null;
 			if (element.tex === '__rect') {
@@ -2414,13 +3110,13 @@ Gameplay.prototype.getObjectsOfType = function(type, areStatic) {
 	
 	if (this._spawnCounts[type] == null || this._spawnCounts[type] === 0) { return retObjs; }
 	
-	if (areStatic === false) {
+	if (!(areStatic === true)) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.type === type) { retObjs.push(element); }
 		})
 	}
 	
-	if (areStatic === true) {
+	if (!(areStatic === false)) {
 		this.staticObjects.forEach((element) => {
 			if (element.type === type) { retObjs.push(element); }
 		})
@@ -2433,13 +3129,13 @@ Gameplay.prototype.getObjectsOfName = function(name, areStatic) {
 	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
 	retObjs = [];
 	
-	if (areStatic === false) {
+	if (!(areStatic === true)) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.name === name) { retObjs.push(element); }
 		})
 	}
 	
-	if (areStatic === true) {
+	if (!(areStatic === false)) {
 		this.staticObjects.forEach((element) => {
 			if (element.name === name) { retObjs.push(element); }
 		})
@@ -2452,13 +3148,13 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 	// areStatic is optional. If true, will only check statics, if false dynamics, if undef the both.
 	retObjs = [];
 	
-	if (areStatic === false) {
+	if (!(areStatic === true)) {
 		this.dynamicObjects.forEach((element) => {
 			if (element.hasTag(tag)) { retObjs.push(element); }
 		})
 	}
 	
-	if (areStatic === true) {
+	if (!(areStatic === false)) {
 		this.staticObjects.forEach((element) => {
 			if (element.hasTag(tag)) { retObjs.push(element); }
 		})
@@ -2472,6 +3168,16 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 //	***
 
 Gameplay.prototype.update = function(deltaMS) {
+	if (this._gameEnded != false) {
+		this._afterEndTime -= deltaMS;
+		if (this._afterEndTime < 0) {
+			if (this._endVictory) { this.trigger_end_victory(); }
+			else { this.trigger_end_defeat(); }
+		}
+	}
+	
+	
+	
 	// Update cursor stage position
 	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
 	this.cursorStage.position.set(mousePos.x, mousePos.y);
@@ -3043,6 +3749,8 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 	setup(options) {
 		if (super.setup) super.setup(options);
 		
+		this._field_kill_applicable = true;
+		
 		this.colour = (options.colour != null) ? options.colour : 'white';
 		
 		if (this.colour === 'red') { this.tint = 0xff0000; }
@@ -3056,7 +3764,6 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 		//this._trailColour = this.tint;
 		
 		this.keyCount = (options.keyCount != null) ? options.keyCount : 0;
-		this._deathTrigger = false;
 		
 		this.sprites.children[0].tint = this.tint;
 	}
@@ -3065,7 +3772,7 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 		if (super.update) super.update(deltaMS);
 	}
 	
-	destroy(immediate) {
+	destructor(options) {
 		visuals.door_key_death(this.GP, this.position, this.colour);
 		
 		// Get all doors, find valid ones, order by relative distance.
@@ -3138,8 +3845,6 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 			this.keyCount--;
 			angle += relAng;
 		}
-		
-		super.destroy(immediate);
 	}
 }
 
@@ -3191,44 +3896,10 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		// Build weapons
 		this.currentWeapon = null;
 		this.ammo = (options.startingAmmo != null) ? options.startingAmmo : 0;
-		if (options.hasShotgun == true) {
-			this.shotgun = this.GP.makeObject('weapon_shotgun', this.name + '_weapon_shotgun', this.position, 0, {
-				hasAmmo: !(options.shotgunStartsWithAmmo === false)
-			});
-			this.shotgun.player = this;
-			if (this.currentWeapon == null) {
-				this.currentWeapon = 'shotgun';
-				this.shotgun.active = true;
-				this._trailColour = this.shotgun.readyTint;
-			}
-			else { this.shotgun.active = false; }
-		}
 		
-		if (options.hasLauncher == true) {
-			this.launcher = this.GP.makeObject('weapon_launcher', this.name + '_weapon_launcher', this.position, 0, {
-				hasAmmo: !(options.launcherStartsWithAmmo === false)
-			});
-			this.launcher.player = this;
-			if (this.currentWeapon == null) {
-				this.currentWeapon = 'launcher';
-				this.launcher.active = true;
-				this._trailColour = this.launcher.readyTint;
-			}
-			else { this.launcher.active = false; }
-		}
-		
-		if (options.hasTesla == true) {
-			this.tesla = this.GP.makeObject('weapon_tesla', this.name + '_weapon_tesla', this.position, 0, {
-				hasAmmo: !(options.teslaStartsWithAmmo === false)
-			});
-			this.tesla.player = this;
-			if (this.currentWeapon == null) {
-				this.currentWeapon = 'tesla';
-				this.tesla.active = true;
-				this._trailColour = this.tesla.readyTint;
-			}
-			else { this.tesla.active = false; }
-		}
+		if (options.hasShotgun == true) { enableShotgun(options.shotgunStartsWithAmmo); }
+		if (options.hasLauncher == true) { enableLauncher(options.launcherStartsWithAmmo); }
+		if (options.hasTesla == true) { enableTesla(options.teslaStartsWithAmmo); }
 		
 		// Build Jumpfields
 		this.hasJumpField = (options.hasJumpField == true);
@@ -3253,6 +3924,66 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		this.pullFieldRange = 3;
 		
 		if (super.setup) super.setup(options);
+	}
+	
+	enableJumpField() { this.hasJumpField = true; }
+	
+	enablePullField() { this.hasPullField = true; }
+	
+	enableShotgun(startsWithAmmo) {
+		if (this.shotgun != null) { return; }
+		
+		this.shotgun = this.GP.makeObject('weapon_shotgun', this.name + '_weapon_shotgun', this.position, 0, {
+			hasAmmo: !(startsWithAmmo === false)
+		});
+		this.shotgun.player = this;
+		if (this.currentWeapon == null) {
+			this.currentWeapon = 'shotgun';
+			this.shotgun.active = true;
+			this._trailColour = this.shotgun.readyTint;
+			
+			if (this.trail) { this.trail.setColour(this.shotgun.readyTint); }
+		}
+		else { this.shotgun.active = false; }
+	}
+	
+	enableLauncher(startsWithAmmo) {
+		if (this.launcher != null) { return; }
+		
+		this.launcher = this.GP.makeObject('weapon_launcher', this.name + '_weapon_launcher', this.position, 0, {
+			hasAmmo: !(startsWithAmmo === false)
+		});
+		this.launcher.player = this;
+		if (this.currentWeapon == null) {
+			this.currentWeapon = 'launcher';
+			this.launcher.active = true;
+			this._trailColour = this.launcher.readyTint;
+			
+			if (this.trail) { this.trail.setColour(this.launcher.readyTint); }
+		}
+		else { this.launcher.active = false; }
+	}
+	
+	enableTesla(startsWithAmmo) {
+		if (this.tesla != null) { return; }
+		
+		this.tesla = this.GP.makeObject('weapon_tesla', this.name + '_weapon_tesla', this.position, 0, {
+			hasAmmo: !(startsWithAmmo === false)
+		});
+		this.tesla.player = this;
+		if (this.currentWeapon == null) {
+			this.currentWeapon = 'tesla';
+			this.tesla.active = true;
+			this._trailColour = this.tesla.readyTint;
+			
+			if (this.trail) { this.trail.setColour(this.tesla.readyTint); }
+		}
+		else { this.tesla.active = false; }
+	}
+	
+	addAmmo(amount) {
+		this.ammo += amount;
+		if (this.ammo > 6) this.ammo = 6;
 	}
 	
 	update(deltaMS) {
@@ -3385,7 +4116,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 				let foundBodies = [];
 				this.GP.world.queryAABB(aabb, (fixture) => {
 					// If an applicable target, and not already on the list, add to list.
-					if (fixture.m_filterCategoryBits & 0xffb4) {
+					if (fixture.m_filterCategoryBits & 0xfbb4) {
 						let body = fixture.getBody();
 						let isSubAssembly = false;
 						
@@ -3466,7 +4197,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 				let foundBodies = [];
 				this.GP.world.queryAABB(aabb, (fixture) => {
 					// If an applicable target, and not already on the list, add to list.
-					if (fixture.m_filterCategoryBits & 0xffb4) {
+					if (fixture.m_filterCategoryBits & 0xfbb4) {
 						let body = fixture.getBody();
 						let isSubAssembly = false;
 						
@@ -3516,20 +4247,20 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		
 		// Torque
 		let angVel = this.body.getAngularVelocity();
-		if (left && !right && angVel < (6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(2 * deltaMS * this.fieldImpFac, true); }
-		if (right && !left && angVel > (-6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(-2 * deltaMS * this.fieldImpFac, true); }
+		if (left && !right && angVel < (6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(30 * this.fieldImpFac, true); }
+		if (right && !left && angVel > (-6 * utils.PI * this.fieldImpFac)) { this.body.applyTorque(-30 * this.fieldImpFac, true); }
 		if (left && right) {
 			// brake
 			if (angVel > 0) {
 				let factor = 2;
 				if (angVel < 2) { factor = angVel; }
-				this.body.applyTorque(-factor * deltaMS * this.fieldImpFac, true);
+				this.body.applyTorque(-factor * 15 * this.fieldImpFac, true);
 			}
 			
 			if (angVel < 0) {
 				let factor = 2;
 				if (angVel > -2) { factor = -angVel; }
-				this.body.applyTorque(factor * deltaMS * this.fieldImpFac, true);
+				this.body.applyTorque(factor * 15 * this.fieldImpFac, true);
 			}
 		}
 		
@@ -3561,10 +4292,10 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 	
 	destructor(options) {
 		if (this.shotgun) this.shotgun.destroy(true);
-		if (this.launcher) this.shotgun.destroy(true);
-		if (this.tesla) this.shotgun.destroy(true);
+		if (this.launcher) this.launcher.destroy(true);
+		if (this.tesla) this.tesla.destroy(true);
 		
-		// TODO: inform gameplay?
+		this.GP.trigger_player_death(this.position);
 	}
 }
 
@@ -4093,7 +4824,7 @@ prefabs.mixins['proj_launcher'] = (superclass) => class extends superclass {
 		let foundBodies = [];
 		this.GP.world.queryAABB(aabb, (fixture) => {
 			// If an applicable target, and not already on the list, add to list.
-			if (fixture.m_filterCategoryBits & 0xff15) {
+			if (fixture.m_filterCategoryBits & 0xfb15) {
 				let body = fixture.getBody();
 				let isSubAssembly = false;
 				
@@ -4158,7 +4889,7 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 		let bestHeur = 0, bestTarget = null;
 		this.GP.world.queryAABB(aabb, (fixture) => {
 			// If an applicable target, and not already on the list, add to list.
-			if (fixture.m_filterCategoryBits & 0xff04) {
+			if (fixture.m_filterCategoryBits & 0xfb04) {
 				let body = fixture.getBody();
 				let valid = false;
 				
@@ -4332,6 +5063,384 @@ prefabs.mixins['proj_key'] = (superclass) => class extends superclass {
 	}
 }
 
+prefabs.mixins['proj_trigger'] = (superclass) => class extends superclass {
+	setup(options) {
+		this.effectType = options.effectType;
+		this.tint = options.tint;
+		this.tintString = options.tintString;
+		this.target = options.target;
+		this.targetFunction = options.targetFunction;
+		this.targetFunctionParameters = options.targetFunctionParameters;
+		
+		this.sprites.children[0].tint = this.tint;
+		
+		this._trailThickness = 0.25;
+		this._trailLifespan	= 0.5;
+		this._trailColour = this.tint;
+		this._trailAlpha = 0.5;
+		
+		let facing = Vec2(Math.cos(this.rotation) * 25, Math.sin(this.rotation) * 25);
+		this.body.applyLinearImpulse(facing, this.position, true);
+		
+		this.visual = new visuals.proj_trigger(this);
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		if (this.target == null || this.target._markedForDeath) {
+			this.destroy(false);
+			if (super.update) super.update(deltaMS);
+			return;
+		} 
+		
+		let deltaS = deltaMS * 0.001,
+			myPos = this.position,
+			myRot = this.rotation,
+			destPos = this.target.position,
+			relative = destPos.clone().sub(myPos),
+			relAng = Math.atan2(relative.y, relative.x),
+			deltaAng = utils.bearingDelta(myRot, relAng);
+		
+		/*let torque,
+			angVel = this.body.getAngularVelocity();
+		
+		if (angVel > (utils.PI / 4)) { torque = -(utils.PI / 8) * deltaS; }
+		else if (angVel < -(utils.PI / 4)) { torque = (utils.PI / 8) * deltaS; }
+		else { torque = (deltaAng > 0) ? deltaS * 5 : deltaS * -5; }
+				
+		this.body.applyTorque(torque, true);*/
+		
+		let linVel = this.body.getLinearVelocity().clone();
+		linVel.normalize();
+		linVel.mul(deltaS * -10);
+			/*linVelAng = Math.atan2(linVel.y, linVel.x),
+			deltaLinVelAng = utils.bearingDelta(relAng, linVelAng);*/
+			
+		/*let factor = ((Math.abs(deltaLinVelAng) / utils.PI) * 0.5) + 0.5;
+		factor *= deltaS * 5;*/
+			
+		let facing = relative.clone();
+		facing.normalize();
+		facing.mul(deltaS * 20).add(linVel);
+		this.body.applyLinearImpulse(facing, myPos, true);
+		
+		if (super.update) super.update(deltaMS);
+	}
+	
+	trigger(other) {
+		if (this.target == null || this.target._markedForDeath) {
+			this.destroy(false);
+			return;
+		}
+		
+		if (this.targetFunctionParameters != null) { this.target[this.targetFunction](this.targetFunctionParameters); }
+		else { this.target[this.targetFunction](); }
+		this.destroy(false);
+	}
+	
+	destroy(immediate) {
+		this.visual.stopEmitting();
+		visuals.proj_trigger_death(this.GP, this.position, this.tintString);
+		
+		super.destroy(immediate);
+	}
+}
+
+
+//	***
+//	General Gameplay mixins
+//	***
+
+prefabs.mixins['pull_bobble'] = (superclass) => class extends superclass {
+	setup(options) {
+		this.home = this.position.clone();
+		this._stiffness = 20;
+		
+		options.maxHP = -1;
+		
+		this.visual = new visuals.pull_bobble_tether(this);
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		let pos = this.position;
+		let posM = this.body.getPosition();
+		if (pos.x != this.home.x && pos.y != this.home.y) {
+			// Apply a force pulling it back home.
+			// Uses Hooke's law.
+			let relative = this.home.clone().sub(pos),
+				disp = relative.normalize(); // Normalize returns length prior to normalization. Useful! Sometimes. Mostly a pain in the arse, actually.
+				
+			let force = this._stiffness * disp;
+			relative.mul(force);
+			this.body.applyForce(relative, posM);
+		}
+		
+		// Friction
+		let linVel = this.body.getLinearVelocity();
+		if (linVel.lengthSquared() != 0) {
+			let friction = linVel.clone().mul(-5);
+			this.body.applyForce(friction, posM);
+		}
+		
+		// Angular friction
+		let rotVel = this.body.getAngularVelocity();
+		if (rotVel != 0) {
+			rotVel *= -1;
+			this.body.applyTorque(rotVel);
+		}
+		
+		this.visual.updatePosition(pos, this.home);
+		
+		if (super.update) super.update(deltaMS);
+	}
+	
+	destructor(options) { this.visual._markedForDeath = true; }
+}
+
+prefabs.mixins['player_unlock'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		utils.translatePlayerOptions(opts, bitA, bitB);
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._field_kill_applicable = true;
+		
+		this.effects = {
+			count: 0,
+			hasJumpField:			options.hasJumpField,
+			hasPullField:			options.hasPullField,
+			hasShotgun:				options.hasShotgun,
+			shotgunStartsWithAmmo:	options.shotgunStartsWithAmmo,
+			hasLauncher:			options.hasLauncher,
+			launcherStartsWithAmmo:	options.launcherStartsWithAmmo,
+			hasTesla:				options.hasTesla,
+			teslaStartsWithAmmo:	options.teslaStartsWithAmmo
+			//startingAmmo: options.startingAmmo
+		};
+		
+		// There's almost certainly a smart way of doing this. This isn't it.
+		if (this.effects.hasJumpField)				this.effects.count++;
+		if (this.effects.hasPullField)				this.effects.count++;
+		if (this.effects.hasShotgun)				this.effects.count++;
+		if (this.effects.hasLauncher)				this.effects.count++;
+		if (this.effects.hasTesla)					this.effects.count++;
+	}
+	
+	destructor(options) {
+		let effectsTriggered = 0,
+			subAngle = utils.TAU / this.effects.count,
+			spawnAngle = this.rotation,
+			myPos = this.position.clone(),
+			player = this.GP.getObjectsOfType('player', false)[0],
+			particleCount = Math.ceil(10 / this.effects.count);
+		
+		if (player == null || player._markedForDeath) {
+			visuals.powerup_death(this.GP, myPos, 10, '000000');
+			return;
+		}
+		
+		if (this.effects.hasJumpField) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'jumpFields',
+				tint:			0x7fffff,
+				tintString:		'7fffff',
+				target:			player,
+				targetFunction:	'enableJumpField',
+				targetFunctionParameters: null
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, '7fffff');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasPullField) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'jumpFields',
+				tint:			0xd97fff,
+				tintString:		'd97fff',
+				target:			player,
+				targetFunction:	'enablePullField',
+				targetFunctionParameters: null
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, 'd97fff');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasShotgun) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'shotgun',
+				tint:			0x0000ff,
+				tintString:		'0000ff',
+				target:			player,
+				targetFunction:	'enableShotgun',
+				targetFunctionParameters: this.effects.shotgunStartsWithAmmo
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, '0000ff');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasLauncher) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'launcher',
+				tint:			0xff0000,
+				tintString:		'ff0000',
+				target:			player,
+				targetFunction:	'enableLauncher',
+				targetFunctionParameters: this.effects.launcherStartsWithAmmo
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, 'ff0000');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasTesla) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
+				effectType:		'tesla',
+				tint:			0x00bf00,
+				tintString:		'00bf00',
+				target:			player,
+				targetFunction:	'enableTesla',
+				targetFunctionParameters: this.effects.teslaStartsWithAmmo
+			});
+			
+			visuals.powerup_death(this.GP, myPos, particleCount, '00bf00');
+			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (effectsTriggered != this.effects.count) { "WARNING: Detected a player_unlock instance spawn effect count mismatch." }
+	}
+}
+
+prefabs.mixins['player_ammo'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		utils.translatePlayerOptions(opts, bitA, bitB);
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._field_kill_applicable = true;
+		
+		this.effects = {
+			/*count: 0,
+			hasJumpField:			options.hasJumpField,
+			hasPullField:			options.hasPullField,
+			hasShotgun:				options.hasShotgun,
+			shotgunStartsWithAmmo:	options.shotgunStartsWithAmmo,
+			hasLauncher:			options.hasLauncher,
+			launcherStartsWithAmmo:	options.launcherStartsWithAmmo,
+			hasTesla:				options.hasTesla,
+			teslaStartsWithAmmo:	options.teslaStartsWithAmmo*/
+			startingAmmo: options.startingAmmo
+		};
+	}
+	
+	destructor(options) {
+		let	myPos = this.position,
+			player = this.GP.getObjectsOfType('player', false)[0],
+			angle = this.rotation,
+			angleSeg = utils.TAU / this.effects.startingAmmo;
+		
+		if (player == null || player._markedForDeath) {
+			visuals.powerup_death(this.GP, myPos, 10, '000000');
+			return;
+		}
+		
+		for (let i = 0; i < this.effects.startingAmmo; i++) {
+			let proj = this.GP.makeObject('proj_trigger', null, myPos, angle, {
+				effectType:		'addAmmo',
+				tint:			0x000000,
+				tintString:		'000000',
+				target:			player,
+				targetFunction:	'addAmmo',
+				targetFunctionParameters: 1
+			});
+			
+			angle += angleSeg;
+		}
+		
+		visuals.powerup_death(this.GP, myPos, 10, '000000');
+	}
+}
+
+prefabs.mixins['player_spawn'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		utils.translatePlayerOptions(opts, bitA, bitB);
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this.visual = visuals.player_spawn_and_goal(this.GP, this.position, 180);
+		this.GP.makeObject('player', null, this.position, 0, options);
+	}
+	
+	destructor(options) {
+		this.visual.destroy();
+		if (super.destructor) { super.destructor(options); }
+	}
+}
+
+prefabs.mixins['player_goal'] = (superclass) => class extends superclass {
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this.visual = visuals.player_spawn_and_goal(this.GP, this.position, 0);
+	}
+	
+	update(deltaMS) {
+		let playerOverlap = false;
+		for (let overlap = this.body.getContactList();
+			overlap != null && !playerOverlap;
+			overlap = overlap.next) {
+			if (overlap.other.gameobject != null) {
+				if (overlap.other.gameobject.type === 'player') { playerOverlap = true; }
+			}
+		}
+		
+		if (playerOverlap) { this.GP.trigger_player_reached_goal(this); }
+		if (super.update) super.update(deltaMS);
+	}
+	
+	destructor(options) {
+		this.visual.destroy();
+		if (super.destructor) { super.destructor(options); }
+	}
+}
+
+//	_______________________________________________________
 
 //	***
 //	Define gameplay prefabs.
@@ -4351,6 +5460,7 @@ prefabs.mixins['proj_key'] = (superclass) => class extends superclass {
  
  *	256	:	0x0100	:	interactables
  *	512	:	0x0200	:	doors
+ *	1024:	0x0400	:	trigger projectiles
 */
 
 //	***
@@ -4515,7 +5625,7 @@ prefabs.door_wall = {
 
 prefabs.door_key = {
 	name: "door_key",
-	tags: ['static', 'gameplay', 'door', 'interactables', 'takes_damage'],
+	tags: ['dynamic', 'gameplay', 'door', 'interactables', 'takes_damage'],
 	zIndex: 35,
 	sprites: [
 		{
@@ -4836,7 +5946,7 @@ prefabs.proj_shotgun = {
 			restitution: 0.1,
 			
 			filterCategoryBits: 0x0002,
-			filterMaskBits: 0xff2e
+			filterMaskBits: 0xfb2e
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_shotgun' ]
@@ -4882,7 +5992,7 @@ prefabs.proj_launcher = {
 			restitution: 0.95,
 			
 			filterCategoryBits: 0x0002,
-			filterMaskBits: 0xff2e
+			filterMaskBits: 0xfb2e
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_launcher' ]
@@ -4935,11 +6045,46 @@ prefabs.proj_key = {
 			friction: 0.0,
 			restitution: 0.9,
 			
-			filterCategoryBits: 0x0010,
+			filterCategoryBits: 0x0400,
 			filterMaskBits: 0x0200
 		}                   
 	],
 	mixins: [ 'leavestrail', 'proj_key' ]
+}
+
+prefabs.proj_trigger = {
+	name: "proj_trigger",
+	tags: ['dynamic', 'trigger' ],
+	zIndex: 15,
+	sprites: [
+		{
+			tex: "__circle",
+			tint: 0xffffff,
+			alpha: 0.5,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.25, 0.25),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'projectile',
+			shape: planck.Circle(0.125),
+			
+			density: 50,
+			friction: 0.0,
+			restitution: 0.9,
+			
+			filterCategoryBits: 0x0400,
+			//filterMaskBits: 0x0200
+		}                   
+	],
+	mixins: [ 'leavestrail', 'proj_trigger' ]
 }
 
 prefabs.gibs_launcher = {
@@ -4975,7 +6120,7 @@ prefabs.gibs_launcher = {
 			restitution: 0.5,
 			
 			filterCategoryBits: 0x0010,
-			filterMaskBits: 0xffff
+			filterMaskBits: 0xfbff
 		}                   
 	],
 	mixins: []
@@ -5015,6 +6160,252 @@ prefabs.test = {
 }
 
 //	***
+//	General Gameplay
+//	***
+
+prefabs.pull_bobble = {
+	name: "pull_bobble",
+	tags: ['dynamic', 'gameplay', 'interactables', 'takes_damage'],
+	zIndex: 36,
+	sprites: [
+		{
+			tex: "pull_bobble.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0.0
+	},
+	fixtures: [
+		{
+			name: 'Bobble',
+			shape: planck.Circle(0.5),
+			
+			density: 20.0,
+			friction: 0.5,
+			restitution: 0.75,
+			
+			filterCategoryBits: 0x0120,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'takes_damage', 'pull_bobble' ]
+};
+
+prefabs.player_unlock = {
+	name: "player_unlock",
+	tags: ['dynamic', 'gameplay', 'powerup', 'interactables', 'takes_damage'],
+	zIndex: 30,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10,
+			points: [
+				new PIXI.Point(0, 0.5),
+				new PIXI.Point(0.5, 0),
+				new PIXI.Point(0, -0.5),
+				new PIXI.Point(-0.5, 0)
+			]
+		},
+		{
+			tex: "__triangle",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.375, 0.375),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 15,
+			points: [
+				new PIXI.Point(0, 0.5),
+				new PIXI.Point(0.5, 0),
+				new PIXI.Point(0, -0.5),
+				new PIXI.Point(-0.5, 0)
+			]
+		},
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Polygon([
+				Vec2(0, 0.5),
+				Vec2(0.5, 0),
+				Vec2(0, -0.5),
+				Vec2(-0.5, 0)
+			]),
+			
+			density: 20.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0100,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'takes_damage', 'player_unlock' ]
+};
+
+prefabs.player_ammo = {
+	name: "player_ammo",
+	tags: ['dynamic', 'gameplay', 'powerup', 'interactables', 'takes_damage'],
+	zIndex: 30,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10,
+			points: [
+				new PIXI.Point(0, 0.5),
+				new PIXI.Point(0.5, 0),
+				new PIXI.Point(0, -0.5),
+				new PIXI.Point(-0.5, 0)
+			]
+		},
+		{
+			tex: "__circle",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.25, 0.25),
+			pos: Vec2(0, 0.1875),
+			rot: 0,
+			zIndex: 15
+		},
+		{
+			tex: "__circle",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.25, 0.25),
+			pos: Vec2(0, -0.1875),
+			rot: 0,
+			zIndex: 15
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Polygon([
+				Vec2(0, 0.5),
+				Vec2(0.5, 0),
+				Vec2(0, -0.5),
+				Vec2(-0.5, 0)
+			]),
+			
+			density: 20.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0100,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'takes_damage', 'player_ammo' ]
+};
+
+prefabs.player_spawn = {
+	name: "player_spawn",
+	tags: ['static', 'spawnpoint'],
+	maxCount: 1,
+	zIndex: 15,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0xff81ff,
+			alpha: 1,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: utils.PI
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Polygon(
+				Vec2(0, -1.5),
+				Vec2(2.25 * 0.57735026919, 0.75),
+				Vec2(2.25 * -0.57735026919, 0.75)
+			),
+			
+			isSensor: true,
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0000
+			//filterMaskBits: 0x0000
+		}
+	],
+	mixins: [ 'player_spawn' ]
+};
+
+prefabs.player_goal = {
+	name: "player_goal",
+	tags: ['static', 'exit'],
+	zIndex: 15,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0xff81ff,
+			alpha: 1,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Polygon(
+				Vec2(0, 1.5),
+				Vec2(2.25 * 0.57735026919, -0.75),
+				Vec2(2.25 * -0.57735026919, -0.75)
+			),
+			
+			isSensor: true,
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0040
+			//filterMaskBits: 0x0000
+		}
+	],
+	mixins: [ 'player_goal' ]
+};
+
+//	***
 //	Level creation / reading
 //	***
 
@@ -5043,8 +6434,8 @@ prefabs.map = {
 	
 	//	Powerups
 	20:	'player_unlock',
-	21:	'player_ammo',
-	22:	'player_powerup'
+	21:	'player_ammo'
+	//22:	'player_powerup'
 }
 
 module.exports = prefabs;

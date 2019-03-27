@@ -331,7 +331,7 @@ visuals.trail = class {
 		
 		// Sprite
 		this.sprite = new PIXI.Container();
-		this.sprite.zIndex = 5;
+		this.sprite.zIndex = 20;
 		parent.GP.stage.addChild(this.sprite);
 		
 		// Points
@@ -1011,6 +1011,620 @@ visuals.proj_key = class {
 	destroy() {
 		this.emitter.destroy();
 	}
+}
+
+visuals.pull_bobble_tether = class {
+	constructor(bobble) {
+		this.alpha = 0.5;
+		this.thickness = bobble.GP.relGU2P(0.125);
+		this.bobble = bobble;
+		
+		// Admin
+		this._lifetimed = false;
+		this._lifetimer = -1;
+		this._markedForDeath = false;
+		bobble.GP.visuals.push(this);
+		
+		// Setup
+		this.sprite = new PIXI.Graphics();
+		this.sprite.zIndex = 9;
+		bobble.GP.stage.addChild(this.sprite);
+		
+		// Toggles
+		this._drewLastTick = false;
+	}
+	
+	updatePosition(bobblePos, tetherPos) {
+		if (this._drewLastTick) { this.sprite.clear(); }
+		
+		if (bobblePos.x == tetherPos.x && bobblePos.y == tetherPos.y) {
+			// Don't bother drawing, bobble is exactly on top of tether.
+			this._drewLastTick = false;
+			return;
+		}
+		
+		this._drewLastTick = true;
+		
+		// Draw cool purple crackly line
+		let GP = this.bobble.GP;
+		let relative = tetherPos.clone().sub(bobblePos),
+			dist = relative.length(),
+			relN = relative.clone();
+		relN.normalize();
+			
+		// Gen Points and draw beam
+		let pointCount = Math.ceil(dist),
+			subSegment = dist / pointCount;
+			
+		this.sprite.lineStyle(this.thickness, 0xd7afff, this.alpha, 0.5);
+		this.sprite.beginFill(0xd7afff, 0);
+		
+		let startP = GP.absGU2P(bobblePos);
+		this.sprite.moveTo(startP.x, startP.y); // Why the flying fuck does PIXI not let me input points into half its damn calls?
+		for (let i = 1; i < pointCount; i++) {
+			let offset = Vec2(-relN.y, relN.x),
+				offsetFactor = (Math.random() - 0.5) * 0.5;
+			offset.mul(offsetFactor);
+			let temp = relN.clone().mul(i * subSegment).add(offset);
+			temp = bobblePos.clone().add(temp);
+			temp = GP.absGU2P(temp);
+			this.sprite.lineTo(temp.x, temp.y);
+		}
+		let endP = GP.absGU2P(tetherPos);
+		this.sprite.lineTo(endP.x, endP.y);
+		this.sprite.endFill();
+		
+		// Put a nice diamond at the tether point.
+		this.sprite.beginFill(0xd7afff, 1);
+		this.sprite.drawCircle(endP.x, endP.y, this.thickness);
+	}
+	
+	update(deltaS) {}
+	
+	destroy() {
+		this.sprite.parent.removeChild(this.sprite);
+		this.sprite.destroy({children:true, texture:false, baseTexture:false});
+	}
+}
+
+visuals.proj_trigger = class {
+	constructor(projectile) {
+		this.parent = projectile;
+		
+		let posP = projectile.GP.absGU2P(projectile.position);
+		
+		// Why doesn't PIXI particles take normal hex values? We may never know...
+		let colour = projectile.tintString;
+		
+		let scale = utils.getSpriteScale(projectile.GP, 128, .25),
+			radius = projectile.GP.relGU2P(1);
+		
+		this.emitter = new PIXI.particles.Emitter(
+			projectile.GP.particleStageLower,
+			particleTex['equilateral.png'],
+			{
+				alpha: {
+					list: [
+						{ value: 1, time: 0 },
+						{ value: 0, time: 1 }
+					],
+					isStepped: false
+				},
+				scale: {
+					list: [
+						{ value: scale, time: 0 },
+						{ value: scale, time: 1 }
+					],
+					minimumScaleMultiplier: 0.25
+				},
+				color: {
+					list: [
+						{ value: colour, time: 0 },
+						{ value: colour, time: 1 }
+					],
+					isStepped: false
+				},
+				speed: {
+					list: [
+						{ value: 0, time: 0 },
+						{ value: 0, time: 1 }
+					],
+					isStepped: false
+				},
+				startRotation: { min: 0, max: 360 },
+				rotationSpeed: { min: 0, max: 0 },
+				lifetime: { min: 0.5, max: 1 },
+				frequency: 0.1,
+				spawnChance: 10,
+				particlesPerWave: 1,
+				emitterLifetime: -1,
+				maxParticles: 1000,
+				pos: { x: posP.x, y: posP.y },
+				addAtBack: false,
+				spawnType: "circle",
+				spawnCircle: {
+					x: 0,
+					y: 0,
+					r: radius
+				}
+			}
+		);
+		
+		this._lifetimed = false; // Marked as being auto-destroyable upon completion.
+		this._lifetimer = -1; // emitterLifetime + lifetime.max + a bit.
+		this._markedForDeath = false;
+		projectile.GP.visuals.push(this);
+	}
+	
+	update(deltaS) {
+		if (this.parent != null && !this.parent._markedForDeath) {
+			let posP = this.parent.GP.absGU2P(this.parent.position);
+			this.emitter.updateSpawnPos(posP.x, posP.y);
+		}
+		this.emitter.update(deltaS);
+	}
+	
+	stopEmitting() {
+		this.emitter.emit = false;
+		this._lifetimed = true; // Marked as being auto-destroyable upon completion.
+		this._lifetimer = 5; // emitterLifetime + lifetime.max + a bit.
+	}
+	
+	destroy() {
+		this.emitter.destroy();
+	}
+}
+
+visuals.proj_trigger_death = function(GP, posGU, tintString) {
+	let posP = GP.absGU2P(posGU);
+	let colour = tintString;
+	
+	let scale = utils.getSpriteScale(GP, 128, .25),
+		speed = GP.relGU2P(0.5);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 1, time: 0.5 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: colour, time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed * 2, time: 0 },
+					{ value: speed, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.75,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.5, max: 0.5 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: 8,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 2; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.powerup_death = function(GP, posGU, particleCount, tintString) {
+	let posP = GP.absGU2P(posGU);
+	let colour = tintString;
+	
+	let scale = utils.getSpriteScale(GP, 128, .5),
+		speed = GP.relGU2P(2);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: '000000', time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.25,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.5, max: 1 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.2,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 2; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.player_spawn_and_goal = function(GP, posGU, rotationOffset) {
+	let posP = GP.absGU2P(posGU);
+	let colour = 'ff81ff';
+	let minRot = rotationOffset - 5,
+		maxRot = rotationOffset + 5;
+	
+	let scale = utils.getSpriteScale(GP, 128, 3);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageLower,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 1, time: 0.5 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.95
+			},
+			color: {
+				list: [
+					{ value: colour, time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: 0, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			startRotation: { min: minRot, max: maxRot },
+			rotationSpeed: { min: -3, max: 3 },
+			lifetime: { min: 3.5, max: 3.5 },
+			frequency: 1.5,
+			spawnChance: 10,
+			particlesPerWave: 1,
+			emitterLifetime: -1,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = false; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = -1; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+	
+	return emitter;
+}
+
+visuals.player_ascension = function(GP, posGU) {
+	let posP = GP.absGU2P(posGU);
+	let colour = 'ff81ff';
+	
+	let scale = utils.getSpriteScale(GP, 128, .5),
+		startSpeed = GP.relGU2P(10),
+		midSpeed = GP.relGU2P(0.5),
+		endSpeed = GP.relGU2P(20);
+	
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['equilateral.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 1, time: 0.75 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.5
+			},
+			color: {
+				list: [
+					{ value: colour, time: 0 },
+					{ value: colour, time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: startSpeed, time: 0 },
+					{ value: midSpeed, time: 0.5 },
+					{ value: endSpeed, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.75,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: -15, max: 15 },
+			lifetime: { min: 2.5, max: 2.5 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: 50,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+}
+
+visuals.player_death = function(GP, posGU) {
+	let posP = GP.absGU2P(posGU);
+	let red		= 'ff0000',
+		green	= '00ff00',
+		blue	= '0000ff';
+	
+	let scale = utils.getSpriteScale(GP, 128, .5),
+		speed = GP.relGU2P(5),
+		particleCount = 15;
+	
+	// Red
+	let emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['diamondfade.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0.75, time: 0.7 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.75
+			},
+			color: {
+				list: [
+					{ value: red, time: 0 },
+					{ value: '000000', time: 0.5 },
+					{ value: '000000', time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.875,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.75, max: 0.75 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+	
+	// Green
+	emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['diamondfade.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0.75, time: 0.7 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.75
+			},
+			color: {
+				list: [
+					{ value: green, time: 0 },
+					{ value: '000000', time: 0.5 },
+					{ value: '000000', time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.875,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.75, max: 0.75 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
+	
+	// Blue
+	emitter = new PIXI.particles.Emitter(
+		GP.particleStageUpper,
+		particleTex['diamondfade.png'],
+		{
+			alpha: {
+				list: [
+					{ value: 1, time: 0 },
+					{ value: 0.75, time: 0.7 },
+					{ value: 0, time: 1 }
+				],
+				isStepped: false
+			},
+			scale: {
+				list: [
+					{ value: scale, time: 0 },
+					{ value: scale, time: 1 }
+				],
+				minimumScaleMultiplier: 0.75
+			},
+			color: {
+				list: [
+					{ value: blue, time: 0 },
+					{ value: '000000', time: 0.5 },
+					{ value: '000000', time: 1 }
+				],
+				isStepped: false
+			},
+			speed: {
+				list: [
+					{ value: speed, time: 0 },
+					{ value: 0, time: 1 }
+				],
+				minimumSpeedMultiplier: 0.875,
+				isStepped: false
+			},
+			startRotation: { min: 0, max: 360 },
+			rotationSpeed: { min: 0, max: 0 },
+			lifetime: { min: 0.75, max: 0.75 },
+			frequency: 0.08,
+			spawnChance: 10,
+			particlesPerWave: particleCount,
+			emitterLifetime: 0.25,
+			maxParticles: 1000,
+			pos: { x: posP.x, y: posP.y },
+			addAtBack: false,
+			spawnType: "circle",
+			spawnCircle: {
+				x: 0,
+				y: 0,
+				r: 0
+			}
+		}
+	);
+	emitter._lifetimed = true; // Marked as being auto-destroyable upon completion.
+	emitter._lifetimer = 3; // emitterLifetime + lifetime.max + a bit.
+	emitter._markedForDeath = false;
+	GP.visuals.push(emitter);
 }
 
 module.exports = visuals;

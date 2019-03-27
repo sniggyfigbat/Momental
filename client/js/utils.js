@@ -95,4 +95,20 @@ utils.setCursorIcon = (GP, colourName) => {
 	GP.app.renderer.plugins.interaction.setCursorMode(colourName);
 }
 
+utils.translatePlayerOptions = (options, bitA, bitB) => {
+	options.hasJumpField = (bitA & 0x04) != 0;
+	options.hasPullField = (bitA & 0x02) != 0;
+	//canSlowTime: true, Don't have enough bits for this. Assume always true.
+	
+	options.hasShotgun = (bitA & 0x01) != 0;
+	options.shotgunStartsWithAmmo = (bitB & 0x80) != 0;
+	options.hasLauncher = (bitB & 0x40) != 0;
+	options.launcherStartsWithAmmo = (bitB & 0x20) != 0;
+	options.hasTesla = (bitB & 0x10) != 0;
+	options.teslaStartsWithAmmo = (bitB & 0x08) != 0;
+	
+	options.startingAmmo = (bitB & 0x07);	// 3 bits, 0-7. In-game-max of 6?
+	if (options.startingAmmo > 6) { options.startingAmmo = 6; }
+}
+
 module.exports = utils;

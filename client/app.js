@@ -226,6 +226,14 @@ function loadLevel(levelData) {
 	
 	GP.loadLevel(resources["TestLevel.png"].texture);
 	
+	GP.trigger_end_victory = () => {
+		console.log('Hooray! You win!');
+	}
+	
+	GP.trigger_end_defeat = () => {
+		console.log('Oh dear! You died!');
+	}
+	
 	/*for (let i = 0; i < 34; i++) {
 		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
 	}
@@ -248,8 +256,8 @@ function loadLevel(levelData) {
 	let wall2 = GP.makeObject('wall', 'wall02', Vec2(1.5, 8.5), 0);
 	let wall3 = GP.makeObject('wall', 'wall03', Vec2(2.5, 8.5), 0);
 	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);*/
-	let player = GP.makeObject('player', 'player02', Vec2(18.5, 21.5), 0, {
-		hasJumpField: true,
+	//let player = GP.makeObject('player', 'player02', Vec2(18.5, 21.5), 0, {
+		/*hasJumpField: true,
 		hasPullField: true,
 		//canSlowTime: true, Don't have enough bits for this. Assume always true.
 		
@@ -260,8 +268,21 @@ function loadLevel(levelData) {
 		hasTesla: true,
 		teslaStartsWithAmmo: true,
 		
-		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?
-		});
+		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?*/
+		
+		/*hasJumpField: false,
+		hasPullField: false,
+		//canSlowTime: true, Don't have enough bits for this. Assume always true.
+		
+		hasShotgun: false,
+		shotgunStartsWithAmmo: false,
+		hasLauncher: false,
+		launcherStartsWithAmmo: false,
+		hasTesla: false,
+		teslaStartsWithAmmo: false,
+		
+		startingAmmo: 0	// 3 bits, 0-7. In-game-max of 6?
+		});*/
 	/*//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
 	
 	let wall5 = GP.makeObject('wall', 'wall05', Vec2(4.5, 8.75), utils.PI/6);
