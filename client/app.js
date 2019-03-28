@@ -93,7 +93,7 @@ function setupApp() {
 		
 	// Create a Pixi Application
 	//let app = new Application({width: 544, height: 544, backgroundColor: 0xffffff});
-	app = new Application({width: winInSize.x, height: winInSize.y, backgroundColor: 0xffffff});
+	app = new Application({width: winInSize.x, height: winInSize.y, backgroundColor: 0xffffff, antialias: true});
 
 	// Add the canvas that Pixi automatically created for you to the HTML document
 	document.body.appendChild(app.view);

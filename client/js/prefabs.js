@@ -254,12 +254,22 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 		
 		this.colour = (options.colour != null) ? options.colour : 'white';
 		
-		if (this.colour === 'red') { this.tint = 0xff0000; }
-		else if (this.colour === 'green') { this.tint = 0x00ff00; }
-		else if (this.colour === 'blue') { this.tint = 0x0000ff; }
+		if (this.colour === 'red') {
+			this.tint = 0xff0000;
+			this.tintString = 'ff0000';
+		}
+		else if (this.colour === 'green') {
+			this.tint = 0x00ff00;
+			this.tintString = '00ff00';
+		}
+		else if (this.colour === 'blue') {
+			this.tint = 0x0000ff;
+			this.tintString = '0000ff';
+		}
 		else {
 			this.colour = 'white';
 			this.tint = 0xffffff;
+			this.tintString = 'ffffff';
 		}
 		
 		//this._trailColour = this.tint;
@@ -267,10 +277,33 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 		this.keyCount = (options.keyCount != null) ? options.keyCount : 0;
 		
 		this.sprites.children[0].tint = this.tint;
-	}
-	
-	update(deltaMS) {
-		if (super.update) super.update(deltaMS);
+		
+		// Setup triggers
+		this.projectiles = [];
+		
+		// Spawn proj_triggers in a circling pattern.
+		let subAngle = utils.TAU / this.keyCount,
+			spawnAngle = this.rotation,
+			myPos = this.position.clone(),
+			ninetyDeg = utils.PI / 2,
+			projTint	= (this.colour === 'white') ? 0xdddddd : this.tint,
+			projTintStr	= (this.colour === 'white') ? 'dddddd' : this.tintString;
+		
+		for (let i = 0; i < this.keyCount; i++) {
+			let offset = Vec2(Math.cos(spawnAngle), Math.sin(spawnAngle));
+			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
+				origin: this,
+				effectType:		'addAmmo',
+				particleName:	'squares.png',
+				tint:			projTint,
+				tintString:		projTintStr,
+				targetFunction:	'destroy',
+				targetFunctionParameters: false
+			});
+			
+			this.projectiles.push(proj);
+			spawnAngle += subAngle;
+		}
 	}
 	
 	destructor(options) {
@@ -321,7 +354,7 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 		}
 		
 		// Spawn proj_key instances.
-		let angle = 0,
+		/*let angle = 0,
 			relAng = utils.TAU / this.keyCount,
 			tint = (this.colour === 'white') ? 0xdddddd : this.tint;
 		for (let i = 0; this.keyCount > 0 && i < sameColour.length; i++) {
@@ -345,7 +378,30 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 			
 			this.keyCount--;
 			angle += relAng;
-		}
+		}*/
+		
+		let numDone = 0;
+		this.projectiles.forEach((element) => {
+			let target = null;
+			let numDoneOffest = numDone - sameColour.length;
+			if (numDone < sameColour.length) {
+				sameColour[numDone].keyAssigned = true;
+				target = sameColour[numDone];
+			}
+			else if (numDoneOffest < multiColour.length) {
+				multiColour[numDoneOffest].keyAssigned = true;
+				target = multiColour[numDoneOffest];
+			}
+			
+			element.giveTarget(target);
+			
+			let relative = element.position.clone().sub(myPos);
+			relative.normalize();
+			relative.mul(25);
+			element.body.applyLinearImpulse(relative, element.position, true);
+			
+			numDone++;
+		});
 	}
 }
 
@@ -388,8 +444,8 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		this.slowingTime = false;
 		
 		this.sprites.body = this.sprites.children[0]; // Order may be changed post-setup according to z-height, so make a permanent link.
-		this.sprites.jumpField = this.sprites.children[1];
-		this.sprites.pullField = this.sprites.children[2];
+		//this.sprites.jumpField = this.sprites.children[1];
+		//this.sprites.pullField = this.sprites.children[2];
 		
 		// Field checks
 		this._field_kill_applicable = true;
@@ -404,9 +460,10 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		
 		// Build Jumpfields
 		this.hasJumpField = (options.hasJumpField == true);
-		this.sprites.jumpField.visible = false;
-		this.jumpFieldExtension = 0.75;
-		this.jumpFieldRange = 3;
+		if (this.hasJumpField) { this.enableJumpField(); }
+		/*this.sprites.jumpField.visible = false;
+		this.jumpFieldExtension = 0.75;*/
+		this.jumpFieldRange = 1.5;
 		
 		/*if (options.hasJumpField == true) {
 			this.jumpfields = [];
@@ -420,16 +477,43 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		
 		// Build Pullfield
 		this.hasPullField = (options.hasPullField == true);
-		this.sprites.pullField.visible = false;
-		this.pullFieldExtension = 0.75;
-		this.pullFieldRange = 3;
+		if (this.hasPullField) { this.enablePullField(); }
+		//this.sprites.pullField.visible = false;
+		//this.pullFieldExtension = 0.75;
+		this.pullFieldRange = 1.5;
 		
 		if (super.setup) super.setup(options);
 	}
 	
-	enableJumpField() { this.hasJumpField = true; }
+	enableJumpField() {
+		//this.hasJumpField = true;
+		if (!this.hasJumpField) {
+			this.hasJumpField = true;
+			this.jumpField = this.GP.makeObject('player_field', this.name + '_jump', this.position, this.rotation, { tint: 0x7fffff });
+			let joint = this.GP.world.createJoint(planck.WeldJoint({
+				frequencyHz : 0.0,
+				dampingRatio : 0.0,
+				localAnchorA: 0,
+				localAnchorB: 0,
+				referenceAngle: 0
+			}, this.body, this.jumpField.body));
+		}
+	}
 	
-	enablePullField() { this.hasPullField = true; }
+	enablePullField() {
+		//this.hasPullField = true;
+		if (!this.hasPullField) {
+			this.hasPullField = true;
+			this.pullField = this.GP.makeObject('player_field', this.name + '_pull', this.position, this.rotation, { tint: 0xd97fff });
+			let joint = this.GP.world.createJoint(planck.WeldJoint({
+				frequencyHz : 0.0,
+				dampingRatio : 0.0,
+				localAnchorA: 0,
+				localAnchorB: 0,
+				referenceAngle: 0
+			}, this.body, this.pullField.body));
+		}
+	}
 	
 	enableShotgun(startsWithAmmo) {
 		if (this.shotgun != null) { return; }
@@ -586,6 +670,156 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		
 		// Jumpfield
 		if (this.hasJumpField) {
+			
+			this.jumpField.update(deltaMS);
+			
+			// Update field size for next tick
+			let JFE = this.jumpField.radius,
+				newJFE = JFE;
+			
+			if (up && newJFE < this.jumpFieldRange) {
+				newJFE += deltaS * 4;
+				if (newJFE > this.jumpFieldRange) {newJFE = this.jumpFieldRange; }
+			}
+			if (!up && newJFE > 0.375) {
+				newJFE -= deltaS * 4;
+				if (newJFE < 0.375) {newJFE = 0.375; }
+			}
+			if (newJFE != JFE) {
+				this.jumpField.radius = newJFE;
+			}
+			
+			// Now do actual jumping.
+			if (JFE > 0.375) {
+				let pos = this.body.getPosition(),
+					mass = this.body.getMass();
+				
+				for (let contact = this.jumpField.getContactList(); contact != null; contact = contact.next) {
+					let otherIsPlayer = (contact.other.gameobject != null) ? (contact.other.gameobject === this) : false;
+					
+					if (!otherIsPlayer) {
+						let other = contact.other,
+							otherMass = other.getMass(),
+							otherStatic = (otherMass === 0),
+							otherLocalMassPos = other.getLocalCenter();
+							
+						if (otherStatic && other.manualMassCalc == null) {
+							let otherMassData = { center: Vec2(0.0, 0.0) };
+							other.m_fixtureList.m_shape.computeMass(otherMassData, 20);
+							
+							other.manualMassCalc = otherMassData;
+							
+						}
+						if (otherStatic) {
+							otherMass = other.manualMassCalc.mass;
+							otherLocalMassPos = other.manualMassCalc.center;
+						}
+						
+						
+						let otherMassPos = other.getPosition().clone().add(otherLocalMassPos);
+							
+						let relative = otherMassPos.clone().sub(pos),
+							distanceFactor = 1, // Anything within the field has distance factor of one.
+							distance = relative.normalize();
+						// If outside the field, a modified square root law applies
+						if (distance > JFE) {
+							let temp = (distance - JFE) + 1;
+							distanceFactor = 1 / (temp * temp);
+						}
+						
+						let otherFIF = (other.gameobject != null) ? other.gameobject.fieldImpFac : 1;
+						
+						let attrForce = -5 * distanceFactor,
+							playerForPow = otherMass * attrForce * this.fieldImpFac,
+							otherForPow = mass * -attrForce * otherFIF;
+						
+						let otherForce = relative.clone().mul(otherForPow);
+						relative.mul(playerForPow);
+
+						if (!otherStatic) { other.applyForce(otherForce, otherMassPos, true); }
+						this.body.applyForce(relative, pos, true);
+					}
+				}
+			}
+		}
+		
+		// Pullfield
+		if (this.hasPullField) {
+			
+			this.pullField.update(deltaMS);
+			
+			// Update field size for next tick
+			let PFE = this.pullField.radius,
+				newPFE = PFE;
+			
+			if (down && newPFE < this.pullFieldRange) {
+				newPFE += deltaS * 4;
+				if (newPFE > this.pullFieldRange) {newPFE = this.pullFieldRange; }
+			}
+			if (!down && newPFE > 0.375) {
+				newPFE -= deltaS * 4;
+				if (newPFE < 0.375) {newPFE = 0.375; }
+			}
+			if (newPFE != PFE) {
+				this.pullField.radius = newPFE;
+			}
+			
+			// Now do actual pulling.
+			if (PFE > 0.375) {
+				let pos = this.body.getPosition(),
+					mass = this.body.getMass();
+				
+				for (let contact = this.pullField.getContactList(); contact != null; contact = contact.next) {
+					let otherIsPlayer = (contact.other.gameobject != null) ? (contact.other.gameobject === this) : false;
+					
+					if (!otherIsPlayer) {
+						let other = contact.other,
+							otherMass = other.getMass(),
+							otherStatic = (otherMass === 0),
+							otherLocalMassPos = other.getLocalCenter();
+							
+						if (otherStatic && other.manualMassCalc == null) {
+							let otherMassData = { center: Vec2(0.0, 0.0) };
+							other.m_fixtureList.m_shape.computeMass(otherMassData, 20);
+							
+							other.manualMassCalc = otherMassData;
+							
+						}
+						if (otherStatic) {
+							otherMass = other.manualMassCalc.mass;
+							otherLocalMassPos = other.manualMassCalc.center;
+						}
+						
+						
+						let otherMassPos = other.getPosition().clone().add(otherLocalMassPos);
+							
+						let relative = otherMassPos.clone().sub(pos),
+							distanceFactor = 1,
+							distance = relative.normalize();
+						// If outside the field, a modified square root law applies
+						if (distance > PFE) {
+							let temp = (distance - PFE) + 1;
+							distanceFactor = 1 / (temp * temp);
+						}
+						
+						let otherFIF = (other.gameobject != null) ? other.gameobject.fieldImpFac : 1;
+						
+						let attrForce = 3 * distanceFactor,
+							playerForPow = otherMass * attrForce * this.fieldImpFac,
+							otherForPow = mass * -attrForce * otherFIF;
+						
+						let otherForce = relative.clone().mul(otherForPow);
+						relative.mul(playerForPow);
+
+						if (!otherStatic) { other.applyForce(otherForce, otherMassPos, true); }
+						this.body.applyForce(relative, pos, true);
+					}
+				}
+			}
+		}
+		
+		// Jumpfield
+		/*if (this.hasJumpField) {
 			if (up && this.jumpFieldExtension < this.jumpFieldRange) {
 				this.jumpFieldExtension += deltaS * 8;
 				if (this.jumpFieldExtension > this.jumpFieldRange) {this.jumpFieldExtension = this.jumpFieldRange; }
@@ -663,10 +897,10 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 					}
 				});
 			}
-		}
+		}*/
 		
 		// Pullfield
-		if (this.hasPullField) {
+		/*if (this.hasPullField) {
 			if (down && this.pullFieldExtension < this.pullFieldRange) {
 				this.pullFieldExtension += deltaS * 8;
 				if (this.pullFieldExtension > this.pullFieldRange) {this.pullFieldExtension = this.pullFieldRange; }
@@ -744,7 +978,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 					}
 				});
 			}
-		}
+		}*/
 		
 		// Torque
 		let angVel = this.body.getAngularVelocity();
@@ -796,7 +1030,54 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		if (this.launcher) this.launcher.destroy(true);
 		if (this.tesla) this.tesla.destroy(true);
 		
+		if (this.jumpField) this.jumpField.destroy(true);
+		if (this.pullField) this.pullField.destroy(true);
+		
 		this.GP.trigger_player_death(this.position);
+	}
+}
+
+prefabs.mixins['player_field'] = (superclass) => class extends superclass {
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this.sprites.children[0].tint = options.tint;
+		this.sprites.children[0].visible = false;
+		
+		this.fixtureDef = {
+			name: 'field',
+			//shape: planck.Circle(0.375),
+			
+			isSensor: true,
+			
+			density: 0.0001,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0001,
+			filterMaskBits: 0xf3b0
+		}
+	}
+	
+	get radius() {
+		let rad = this.body.m_fixtureList.m_shape.m_radius;
+		return rad;
+	}
+	
+	set radius(newRadius) {
+		this.body.destroyFixture(this.body.m_fixtureList);
+		this.fixtureDef.shape = planck.Circle(newRadius);
+		this.body.createFixture(this.fixtureDef);
+		
+		let sprSc = utils.getSpriteScale(this.GP, 128, 2 * newRadius);
+		this.sprites.children[0].scale.set(sprSc, sprSc);
+		
+		if (newRadius > 0.375) { this.sprites.children[0].visible = true; }
+		else { this.sprites.children[0].visible = false; }
+	}
+	
+	getContactList() {
+		return this.body.getContactList();
 	}
 }
 
@@ -1501,75 +1782,13 @@ prefabs.mixins['proj_tesla'] = (superclass) => class extends superclass {
 	}
 }
 
-prefabs.mixins['proj_key'] = (superclass) => class extends superclass {
-	setup(options) {
-		this.colour = options.colour;
-		this.tint = options.tint;
-		this.target = options.target;
-		
-		this.sprites.children[0].tint = this.tint;
-		
-		this._trailThickness = 0.25;
-		this._trailLifespan	= 0.5;
-		this._trailColour = this.tint;
-		this._trailAlpha = 0.5;
-		
-		let facing = Vec2(Math.cos(this.rotation) * 25, Math.sin(this.rotation) * 25);
-		this.body.applyLinearImpulse(facing, this.position, true);
-		
-		this.visual = new visuals.proj_key(this);
-		
-		if (super.setup) super.setup(options);
-	}
-	
-	update(deltaMS) {
-		let deltaS = deltaMS * 0.001,
-			myPos = this.position,
-			myRot = this.rotation,
-			destPos = this.target.position,
-			relative = destPos.clone().sub(myPos),
-			relAng = Math.atan2(relative.y, relative.x),
-			deltaAng = utils.bearingDelta(myRot, relAng);
-		
-		/*let torque,
-			angVel = this.body.getAngularVelocity();
-		
-		if (angVel > (utils.PI / 4)) { torque = -(utils.PI / 8) * deltaS; }
-		else if (angVel < -(utils.PI / 4)) { torque = (utils.PI / 8) * deltaS; }
-		else { torque = (deltaAng > 0) ? deltaS * 5 : deltaS * -5; }
-				
-		this.body.applyTorque(torque, true);*/
-		
-		let linVel = this.body.getLinearVelocity().clone();
-		linVel.normalize();
-		linVel.mul(deltaS * -10);
-			/*linVelAng = Math.atan2(linVel.y, linVel.x),
-			deltaLinVelAng = utils.bearingDelta(relAng, linVelAng);*/
-			
-		/*let factor = ((Math.abs(deltaLinVelAng) / utils.PI) * 0.5) + 0.5;
-		factor *= deltaS * 5;*/
-			
-		let facing = relative.clone();
-		facing.normalize();
-		facing.mul(deltaS * 20).add(linVel);
-		this.body.applyLinearImpulse(facing, myPos, true);
-		
-		if (super.update) super.update(deltaMS);
-	}
-	
-	destroy(immediate) {
-		this.visual.stopEmitting();
-		
-		super.destroy(immediate);
-	}
-}
-
 prefabs.mixins['proj_trigger'] = (superclass) => class extends superclass {
 	setup(options) {
+		this.origin = options.origin;
 		this.effectType = options.effectType;
+		this.particleName = options.particleName;
 		this.tint = options.tint;
 		this.tintString = options.tintString;
-		this.target = options.target;
 		this.targetFunction = options.targetFunction;
 		this.targetFunctionParameters = options.targetFunctionParameters;
 		
@@ -1580,56 +1799,81 @@ prefabs.mixins['proj_trigger'] = (superclass) => class extends superclass {
 		this._trailColour = this.tint;
 		this._trailAlpha = 0.5;
 		
-		let facing = Vec2(Math.cos(this.rotation) * 25, Math.sin(this.rotation) * 25);
-		this.body.applyLinearImpulse(facing, this.position, true);
+		//let facing = Vec2(Math.cos(this.rotation) * 5, Math.sin(this.rotation) * 5);
+		//this.body.applyLinearImpulse(facing, this.position, true);
 		
 		this.visual = new visuals.proj_trigger(this);
+		
+		this._targeted = false;
+		this._triggered = false;
 		
 		if (super.setup) super.setup(options);
 	}
 	
 	update(deltaMS) {
-		if (this.target == null || this.target._markedForDeath) {
+		if (this._targeted && (this.target == null || this.target._markedForDeath)) {
 			this.destroy(false);
 			if (super.update) super.update(deltaMS);
 			return;
 		} 
 		
-		let deltaS = deltaMS * 0.001,
-			myPos = this.position,
-			myRot = this.rotation,
-			destPos = this.target.position,
-			relative = destPos.clone().sub(myPos),
-			relAng = Math.atan2(relative.y, relative.x),
-			deltaAng = utils.bearingDelta(myRot, relAng);
-		
-		/*let torque,
-			angVel = this.body.getAngularVelocity();
-		
-		if (angVel > (utils.PI / 4)) { torque = -(utils.PI / 8) * deltaS; }
-		else if (angVel < -(utils.PI / 4)) { torque = (utils.PI / 8) * deltaS; }
-		else { torque = (deltaAng > 0) ? deltaS * 5 : deltaS * -5; }
+		if (this._triggered) { this.trigger(); }
+		else {
+			let myPos = this.position,
+				myRot = this.rotation,
+				destPos = (this._targeted) ? this.target.position : this.origin.position,
+				relative = destPos.clone().sub(myPos),
+				relAng = Math.atan2(relative.y, relative.x),
+				deltaAng = utils.bearingDelta(myRot, relAng);
+			
+			// Friction component.
+			let linVel = this.body.getLinearVelocity().clone();
+				linVel.normalize();
+			
+			if (this._targeted) {
+				// Chase the target (eg. the player)
+				linVel.mul(-10);
 				
-		this.body.applyTorque(torque, true);*/
-		
-		let linVel = this.body.getLinearVelocity().clone();
-		linVel.normalize();
-		linVel.mul(deltaS * -10);
-			/*linVelAng = Math.atan2(linVel.y, linVel.x),
-			deltaLinVelAng = utils.bearingDelta(relAng, linVelAng);*/
-			
-		/*let factor = ((Math.abs(deltaLinVelAng) / utils.PI) * 0.5) + 0.5;
-		factor *= deltaS * 5;*/
-			
-		let facing = relative.clone();
-		facing.normalize();
-		facing.mul(deltaS * 20).add(linVel);
-		this.body.applyLinearImpulse(facing, myPos, true);
-		
+				let facing = relative.clone();
+				facing.normalize();
+				facing.mul(20).add(linVel);
+				
+				this.body.applyForce(facing, myPos, true);
+			}
+			else {
+				// Circle the origin (thing that spawned this) until given a target.
+				linVel.mul(-10);				
+				
+				// Forward movement.
+				let forward = Vec2(Math.cos(myRot), Math.sin(myRot));
+				let orbitFactor = Math.abs(deltaAng) / utils.PI; // 0 to 1. 0.5 is optimal.
+				orbitFactor = orbitFactor < 0.5 ? 1 - Math.abs(orbitFactor - 0.5) : 1 - (Math.abs(orbitFactor - 0.5) * 2);
+				
+				//forward.normalize();
+				forward.mul(17.5 * orbitFactor).add(linVel);
+				this.body.applyForce(forward, myPos, true);
+				
+				// Rotation.
+				let myAngVel = this.body.getAngularVelocity(),
+					angForce;
+				if (myAngVel > 3) { angForce = -1; }
+				else if (myAngVel < -3) { angForce = 1; }
+				else { angForce = deltaAng / utils.PI; }
+				
+				// angForce *= 1;
+				
+				this.body.applyTorque(angForce, true);
+			}
+		}
 		if (super.update) super.update(deltaMS);
 	}
 	
-	trigger(other) {
+	giveTarget(target) {
+		this.target = target;
+		this._targeted = true;
+	}
+	
+	trigger() {
 		if (this.target == null || this.target._markedForDeath) {
 			this.destroy(false);
 			return;
@@ -1642,7 +1886,7 @@ prefabs.mixins['proj_trigger'] = (superclass) => class extends superclass {
 	
 	destroy(immediate) {
 		this.visual.stopEmitting();
-		visuals.proj_trigger_death(this.GP, this.position, this.tintString);
+		visuals.proj_trigger_death(this.GP, this.position, this.tintString, this.particleName);
 		
 		super.destroy(immediate);
 	}
@@ -1735,102 +1979,126 @@ prefabs.mixins['player_unlock'] = (superclass) => class extends superclass {
 		if (this.effects.hasShotgun)				this.effects.count++;
 		if (this.effects.hasLauncher)				this.effects.count++;
 		if (this.effects.hasTesla)					this.effects.count++;
-	}
-	
-	destructor(options) {
+		
+		this.projectiles = [];
+		
+		// Spawn proj_triggers in a circling pattern.
 		let effectsTriggered = 0,
 			subAngle = utils.TAU / this.effects.count,
 			spawnAngle = this.rotation,
 			myPos = this.position.clone(),
-			player = this.GP.getObjectsOfType('player', false)[0],
-			particleCount = Math.ceil(10 / this.effects.count);
+			ninetyDeg = utils.PI / 2;
+		
+		if (this.effects.hasJumpField) {
+			let offset = Vec2(Math.cos(spawnAngle), Math.sin(spawnAngle));
+			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
+				origin: this,
+				effectType:		'jumpFields',
+				particleName:	'equilateral.png',
+				tint:			0x7fffff,
+				tintString:		'7fffff',
+				targetFunction:	'enableJumpField',
+				targetFunctionParameters: null
+			});
+			
+			this.projectiles.push(proj);
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasPullField) {
+			let offset = Vec2(Math.cos(spawnAngle), Math.sin(spawnAngle));
+			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
+				origin: this,
+				effectType:		'jumpFields',
+				particleName:	'equilateral.png',
+				tint:			0xd97fff,
+				tintString:		'd97fff',
+				targetFunction:	'enablePullField',
+				targetFunctionParameters: null
+			});
+			
+			this.projectiles.push(proj);
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasShotgun) {
+			let offset = Vec2(Math.cos(spawnAngle), Math.sin(spawnAngle));
+			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
+				origin: this,
+				effectType:		'shotgun',
+				particleName:	'equilateral.png',
+				tint:			0x0000ff,
+				tintString:		'0000ff',
+				targetFunction:	'enableShotgun',
+				targetFunctionParameters: this.effects.shotgunStartsWithAmmo
+			});
+			
+			this.projectiles.push(proj);			
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasLauncher) {
+			let offset = Vec2(Math.cos(spawnAngle), Math.sin(spawnAngle));
+			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
+				origin: this,
+				effectType:		'launcher',
+				particleName:	'equilateral.png',
+				tint:			0xff0000,
+				tintString:		'ff0000',
+				targetFunction:	'enableLauncher',
+				targetFunctionParameters: this.effects.launcherStartsWithAmmo
+			});
+			
+			this.projectiles.push(proj);
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (this.effects.hasTesla) {
+			let offset = Vec2(Math.cos(spawnAngle), Math.sin(spawnAngle));
+			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
+				origin: this,
+				effectType:		'tesla',
+				particleName:	'equilateral.png',
+				tint:			0x00bf00,
+				tintString:		'00bf00',
+				targetFunction:	'enableTesla',
+				targetFunctionParameters: this.effects.teslaStartsWithAmmo
+			});
+			
+			this.projectiles.push(proj);
+			spawnAngle += subAngle;
+			effectsTriggered++;
+		}
+		
+		if (effectsTriggered != this.effects.count) { "WARNING: Detected a player_unlock instance spawn effect count mismatch." }
+	}
+	
+	destructor(options) {
+		if (super.destructor) { super.destructor(options); }
+		
+		let myPos = this.position.clone(),
+			particleCount = Math.ceil(10 / this.effects.count),
+			player = this.GP.getObjectsOfType('player', false)[0];
 		
 		if (player == null || player._markedForDeath) {
 			visuals.powerup_death(this.GP, myPos, 10, '000000');
 			return;
 		}
 		
-		if (this.effects.hasJumpField) {
-			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
-				effectType:		'jumpFields',
-				tint:			0x7fffff,
-				tintString:		'7fffff',
-				target:			player,
-				targetFunction:	'enableJumpField',
-				targetFunctionParameters: null
-			});
+		this.projectiles.forEach((element) => {
+			visuals.powerup_death(this.GP, myPos, particleCount, element.tintString);
 			
-			visuals.powerup_death(this.GP, myPos, particleCount, '7fffff');
+			let relative = element.position.clone().sub(myPos);
+			relative.normalize();
+			relative.mul(25);
+			element.body.applyLinearImpulse(relative, element.position, true);
 			
-			spawnAngle += subAngle;
-			effectsTriggered++;
-		}
-		
-		if (this.effects.hasPullField) {
-			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
-				effectType:		'jumpFields',
-				tint:			0xd97fff,
-				tintString:		'd97fff',
-				target:			player,
-				targetFunction:	'enablePullField',
-				targetFunctionParameters: null
-			});
-			
-			visuals.powerup_death(this.GP, myPos, particleCount, 'd97fff');
-			
-			spawnAngle += subAngle;
-			effectsTriggered++;
-		}
-		
-		if (this.effects.hasShotgun) {
-			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
-				effectType:		'shotgun',
-				tint:			0x0000ff,
-				tintString:		'0000ff',
-				target:			player,
-				targetFunction:	'enableShotgun',
-				targetFunctionParameters: this.effects.shotgunStartsWithAmmo
-			});
-			
-			visuals.powerup_death(this.GP, myPos, particleCount, '0000ff');
-			
-			spawnAngle += subAngle;
-			effectsTriggered++;
-		}
-		
-		if (this.effects.hasLauncher) {
-			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
-				effectType:		'launcher',
-				tint:			0xff0000,
-				tintString:		'ff0000',
-				target:			player,
-				targetFunction:	'enableLauncher',
-				targetFunctionParameters: this.effects.launcherStartsWithAmmo
-			});
-			
-			visuals.powerup_death(this.GP, myPos, particleCount, 'ff0000');
-			
-			spawnAngle += subAngle;
-			effectsTriggered++;
-		}
-		
-		if (this.effects.hasTesla) {
-			let proj = this.GP.makeObject('proj_trigger', null, myPos, spawnAngle, {
-				effectType:		'tesla',
-				tint:			0x00bf00,
-				tintString:		'00bf00',
-				target:			player,
-				targetFunction:	'enableTesla',
-				targetFunctionParameters: this.effects.teslaStartsWithAmmo
-			});
-			
-			visuals.powerup_death(this.GP, myPos, particleCount, '00bf00');
-			
-			spawnAngle += subAngle;
-			effectsTriggered++;
-		}
-		
-		if (effectsTriggered != this.effects.count) { "WARNING: Detected a player_unlock instance spawn effect count mismatch." }
+			element.giveTarget(player);
+		});
 	}
 }
 
@@ -1861,31 +2129,49 @@ prefabs.mixins['player_ammo'] = (superclass) => class extends superclass {
 			teslaStartsWithAmmo:	options.teslaStartsWithAmmo*/
 			startingAmmo: options.startingAmmo
 		};
+		
+		this.projectiles = [];
+		
+		// Spawn proj_triggers in a circling pattern.
+		let subAngle = utils.TAU / this.effects.startingAmmo,
+			spawnAngle = this.rotation,
+			myPos = this.position.clone(),
+			ninetyDeg = utils.PI / 2;
+		
+		for (let i = 0; i < this.effects.startingAmmo; i++) {
+			let offset = Vec2(Math.cos(spawnAngle), Math.sin(spawnAngle));
+			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
+				origin: this,
+				effectType:		'addAmmo',
+				particleName:	'equilateral.png',
+				tint:			0x000000,
+				tintString:		'000000',
+				targetFunction:	'addAmmo',
+				targetFunctionParameters: 1
+			});
+			
+			this.projectiles.push(proj);
+			spawnAngle += subAngle;
+		}
 	}
 	
 	destructor(options) {
-		let	myPos = this.position,
-			player = this.GP.getObjectsOfType('player', false)[0],
-			angle = this.rotation,
-			angleSeg = utils.TAU / this.effects.startingAmmo;
+		let myPos = this.position.clone(),
+			player = this.GP.getObjectsOfType('player', false)[0];
 		
 		if (player == null || player._markedForDeath) {
 			visuals.powerup_death(this.GP, myPos, 10, '000000');
 			return;
 		}
 		
-		for (let i = 0; i < this.effects.startingAmmo; i++) {
-			let proj = this.GP.makeObject('proj_trigger', null, myPos, angle, {
-				effectType:		'addAmmo',
-				tint:			0x000000,
-				tintString:		'000000',
-				target:			player,
-				targetFunction:	'addAmmo',
-				targetFunctionParameters: 1
-			});
+		this.projectiles.forEach((element) => {
+			let relative = element.position.clone().sub(myPos);
+			relative.normalize();
+			relative.mul(25);
+			element.body.applyLinearImpulse(relative, element.position, true);
 			
-			angle += angleSeg;
-		}
+			element.giveTarget(player);
+		});
 		
 		visuals.powerup_death(this.GP, myPos, 10, '000000');
 	}
@@ -1938,6 +2224,143 @@ prefabs.mixins['player_goal'] = (superclass) => class extends superclass {
 	destructor(options) {
 		this.visual.destroy();
 		if (super.destructor) { super.destructor(options); }
+	}
+}
+
+//	***
+//	Enemy mixins
+//	***
+
+prefabs.mixins['enemy_walker'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		
+		opts.startGoingRight = (bitA & 0x04) != 0;
+				
+		opts.maxHP = 35;
+
+		return opts;
+	}
+	
+	setup(options) {
+		this.sprites.body	= this.sprites.children[0];
+		this.sprites.arrow	= this.sprites.children[1];
+		this.sprites.excla	= this.sprites.children[2];
+		
+		this._nextDirState = options.startGoingRight ? 1 : 0;
+		this._state = options.startGoingRight ? 1 : 0;
+		/*
+		 *	Behaviour States:
+		 *	0:	Going left.
+		 *	1:	Going right.
+		 *	2:	In the air.
+		*/
+		
+		this._leftContact = false;
+		this._rightContact = false;
+		this._exclaTimeout = 0;
+		this._stateChangeCooldown = 0;
+		this._stoppedCountup = 0;
+		
+		// Setup ground sensor.
+		this.groundSensor = this.GP.makeObject('enemy_sensor', this.name + '_sensor', this.position.clone().sub(Vec2(0.0, 0.5)), 0);
+		this.groundSensor.body.setFixedRotation(true);
+		let joint = this.GP.world.createJoint(planck.RevoluteJoint({
+			localAnchorA: Vec2(0, 0),
+			localAnchorB: Vec2(0.0, 0.5)
+		}, this.body, this.groundSensor.body));
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		let angVel = this.body.getAngularVelocity();
+		
+		this._stateChangeCooldown -= deltaMS;
+		if (this._stateChangeCooldown < 0) { this._stateChangeCooldown = 0; }
+		if (Math.abs(angVel) < 0.5) {
+			this._exclaTimeout -= deltaMS;
+			if (this._exclaTimeout < 0) { this._exclaTimeout = 0; }
+		}
+		if (Math.abs(angVel) < 0.1) { this._stoppedCountup += deltaMS; }
+		else {this._stoppedCountup = 0; }
+		
+		
+		let touchingGround = (this.groundSensor.body.getContactList() != null);
+		
+		// Check collisions and sensor, update state.
+		if (!touchingGround) {
+			if (this._state !== 2) {
+				this._state = 2;
+			}
+			else if (this._state === 0 && this._leftContact && this._stateChangeCooldown === 0) {
+				this._nextDirState = 1;
+				this._stateChangeCooldown = 1000;
+			}
+			else if (this._state === 1 && this._rightContact && this._stateChangeCooldown === 0) {
+				this._nextDirState = 0;
+				this._stateChangeCooldown = 1000;
+			}
+			
+			this._exclaTimeout = 1500;
+		}
+		else {
+			if (this._state === 0 && (this._leftContact || angVel < -0.5) && this._stateChangeCooldown === 0) {
+				this._state = 1;
+				this._nextDirState = 1;
+				this._stateChangeCooldown = 1000;
+			}
+			else if (this._state === 1 && (this._rightContact || angVel > 0.5)  && this._stateChangeCooldown === 0) {
+				this._state = 0;
+				this._nextDirState = 0;
+				this._stateChangeCooldown = 1000;
+			}
+			else if (this._state === 2 && this._exclaTimeout === 0 && Math.abs(angVel) < 0.5) {
+				this._state = this._nextDirState;
+				this._stateChangeCooldown = 1000;
+			}
+			
+			if (this._state < 2 && this._stoppedCountup > 2000) {
+				this._state = (this._state === 1) ? 0 : 1;
+				this._nextDirState = this._state;
+				this._stoppedCountup = 0;
+			}
+		}
+		
+		// Implement state.
+		if (this._state < 2) {
+			// Moving
+			this.sprites.arrow.visible = true;
+			this.sprites.excla.visible = false;
+			
+			let dirFac = (this._state === 1) ? -1 : 1;
+			let angVel1 = dirFac * angVel;
+			if (angVel1 < 6 * this.fieldImpFac) { this.body.applyTorque(dirFac * 10 * this.fieldImpFac), true; }
+		}
+		else {
+			// In the air.
+			this.sprites.arrow.visible = false;
+			this.sprites.excla.visible = true;
+			
+			// Just dampen rotation.
+			if (angVel < 0) { this.body.applyTorque(10 * this.fieldImpFac), true; }
+			if (angVel > 0) { this.body.applyTorque(-10 * this.fieldImpFac), true; }
+		}
+		
+		// Reset collision listener triggers
+		this._leftContact = false;
+		this._rightContact = false;
+		
+		if (super.update) super.update(deltaMS);
+		this.sprites.arrow.rotation	= (this._state === 1) ? this.rotation : this.rotation + utils.PI;
+		this.sprites.excla.rotation	= this.rotation;
+		
+		this.groundSensor.update(deltaMS);
+	}
+	
+	destructor(options) {
+		this.groundSensor.destroy(true);
+		if (super.destructor) super.destructor(options);
 	}
 }
 
@@ -2276,7 +2699,7 @@ prefabs.field_dec = {
 
 prefabs.player = {
 	name: "player",
-	tags: ['dynamic', 'player'],
+	tags: ['dynamic', 'player' ],
 	maxCount: 1,
 	zIndex: 25,
 	sprites: [
@@ -2288,7 +2711,7 @@ prefabs.player = {
 			pos: Vec2(0, 0),
 			rot: 0,
 			zIndex: 15
-		},
+		}/*,
 		{
 			tex: "circle_border.png",
 			tint: 0x7fffff,
@@ -2308,7 +2731,7 @@ prefabs.player = {
 			pos: Vec2(0, 0),
 			rot: 0,
 			zIndex: 0
-		}
+		}*/
 	],
 	body: {
 		type: 'dynamic'
@@ -2323,11 +2746,74 @@ prefabs.player = {
 			restitution: 0.25,
 			
 			filterCategoryBits: 0x0001,
-			filterMaskBits: 0xff6c
-		}
+			filterMaskBits: 0xff6d
+		}/*,
+		{
+			name: 'jump_field',
+			shape: planck.Circle(0.375),
+			
+			isSensor: true,
+			
+			density: 10.0,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0001,
+			filterMaskBits: 0xf3b0
+		},
+		{
+			name: 'pull_field',
+			shape: planck.Circle(0.375),
+			
+			isSensor: true,
+			
+			density: 10.0,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0001,
+			filterMaskBits: 0xf3b0
+		}*/
 	],
 	mixins: [ 'leavestrail', 'player' ]
 };
+
+prefabs.player_field = {
+	name: "player_field",
+	tags: ['dynamic', 'player', 'subassembly'],
+	zIndex: 23,
+	sprites: [
+		{
+			tex: "circle_border.png",
+			tint: 0xffffff,
+			alpha: 1,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.75, 0.75),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 1
+		}
+	],
+	body: {
+		type: 'dynamic'
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Circle(0.375),
+			
+			isSensor: true,
+			
+			density: 0.0001,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0001,
+			filterMaskBits: 0xf3b0
+		}
+	],
+	mixins: [ 'player_field' ]
+}
 
 prefabs.weapon_shotgun = {
 	name: "weapon_shotgun",
@@ -2516,41 +3002,6 @@ prefabs.proj_tesla = {
 		}
 	],
 	mixins: [ 'proj_tesla' ]
-}
-
-prefabs.proj_key = {
-	name: "proj_key",
-	tags: ['dynamic', 'door' ],
-	zIndex: 15,
-	sprites: [
-		{
-			tex: "__circle",
-			tint: 0xffffff,
-			alpha: 0.5,
-			anchor: Vec2(0.5, 0.5),
-			scale: Vec2(0.25, 0.25),
-			pos: Vec2(0, 0),
-			rot: 0
-		}
-	],
-	body: {
-		type: 'dynamic',
-		gravityScale: 0
-	},
-	fixtures: [
-		{
-			name: 'projectile',
-			shape: planck.Circle(0.125),
-			
-			density: 50,
-			friction: 0.0,
-			restitution: 0.9,
-			
-			filterCategoryBits: 0x0400,
-			filterMaskBits: 0x0200
-		}                   
-	],
-	mixins: [ 'leavestrail', 'proj_key' ]
 }
 
 prefabs.proj_trigger = {
@@ -2904,6 +3355,100 @@ prefabs.player_goal = {
 		}
 	],
 	mixins: [ 'player_goal' ]
+};
+
+//	***
+//	Enemies
+//	***
+
+prefabs.enemy_sensor = {
+	name: "enemy_sensor",
+	tags: ['dynamic', 'enemy', 'subassembly'],
+	zIndex: 21,
+	sprites: [
+		{
+			tex: "__rect",
+			tint: 0xff00ff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10,
+			visible: false
+		}
+	],
+	body: {
+		type: 'dynamic'
+	},
+	fixtures: [
+		{
+			name: 'sensor',
+			shape: planck.Box(0.25, 0.25),
+			
+			isSensor: true,
+			
+			density: 0.0001,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0004,
+			filterMaskBits: 0xf020
+		}
+	],
+	mixins: []
+};
+
+prefabs.enemy_walker = {
+	name: "enemy_walker",
+	tags: ['dynamic', 'gameplay', 'enemy', 'takes_damage'],
+	zIndex: 21,
+	sprites: [
+		{
+			tex: "__circle",
+			tint: 0xff0000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10
+		},
+		{
+			tex: "enemy_symbol_arrow.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 15
+		},
+		{
+			tex: "enemy_symbol_exclamation.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 16,
+			visible: false
+		}
+	],
+	body: {
+		type: 'dynamic'
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Circle(0.5),
+			
+			density: 10.0,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0004,
+			filterMaskBits: 0xf363
+		}
+	],
+	mixins: [ 'leavestrail', 'takes_damage', 'enemy_walker' ]
 };
 
 //	***

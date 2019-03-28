@@ -136,7 +136,7 @@ function Gameplay(world, app, IH, settings) {
 		}
 		else {
 			// proj_key
-			let aProjK = typeA === 'proj_key';
+			/*let aProjK = typeA === 'proj_key';
 			let bProjK = typeB === 'proj_key';
 			if (aProjK || bProjK) {
 				let projK = (aProjK) ? goA : goB,
@@ -147,18 +147,18 @@ function Gameplay(world, app, IH, settings) {
 					other.destroy(false);
 				}
 				else { contact.setEnabled(false); }
-			}
+			}*/
 			
 			
 			// proj_trigger
 			let aProjT = typeA === 'proj_trigger';
 			let bProjT = typeB === 'proj_trigger';
 			if (aProjT && isGOB) {
-				if (goA.target === goB) { goA.trigger(goB); }
+				if (goA.target === goB) { goA._triggered = true; }
 				contact.setEnabled(false);
 			}
 			if (bProjT && isGOA) {
-				if (goB.target === goA) { goB.trigger(goA); }
+				if (goB.target === goA) { goB._triggered = true; }
 				contact.setEnabled(false);
 			}
 			
@@ -311,6 +311,31 @@ function Gameplay(world, app, IH, settings) {
 			if (aSmash && !bProjS && Math.abs(totalNormalImpulse) > 50) { goA.destroy(false); }
 			if (bSmash && !aProjS && Math.abs(totalNormalImpulse) > 50) { goB.destroy(false); }
 			
+			
+			// enemy_walker
+			let aEnemy = typeA === 'enemy_walker' || typeA === 'enemy_flier';
+			let bEnemy = typeB === 'enemy_walker' || typeB === 'enemy_flier';
+			if (aEnemy || bEnemy) {
+				let worldMan = {points: [], separations: []};
+				contact.getWorldManifold(worldMan);
+				
+				if (Math.abs(worldMan.normal.x) > Math.abs(worldMan.normal.y)) {
+					let normPos = (worldMan.normal.x > 0);
+					// Normal points from A to B.
+					if (aEnemy) {
+						if (normPos) { goA._rightContact = true; }
+						else { goA._leftContact = true; }
+					}
+					else if (bEnemy) {
+						if (normPos) { goB._leftContact = true; }
+						else { goB._rightContact = true; }
+					}
+				}
+			}
+			
+			
+			
+			let t = 1;
 			// ...
 		}
 	});
@@ -515,9 +540,7 @@ Gameplay.prototype.object = class GameObject {
 		this._decelerated = !this._field_dec_applicable;
 		for (let overlap = this.body.getContactList();
 			overlap != null &&
-			(!this._accelerated ||
-			!this._decelerated ||
-			!killed);
+			(!this._accelerated || !this._decelerated);
 			overlap = overlap.next) {
 			if (overlap.other.gameobject != null) {
 				let other = overlap.other.gameobject;

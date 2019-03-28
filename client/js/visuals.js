@@ -921,7 +921,7 @@ visuals.door_key_death = function(GP, posGU, colour) {
 	GP.visuals.push(emitter);
 }
 
-visuals.proj_key = class {
+/*visuals.proj_key = class {
 	constructor(projectile) {
 		this.parent = projectile;
 		
@@ -1011,7 +1011,7 @@ visuals.proj_key = class {
 	destroy() {
 		this.emitter.destroy();
 	}
-}
+}*/
 
 visuals.pull_bobble_tether = class {
 	constructor(bobble) {
@@ -1101,7 +1101,7 @@ visuals.proj_trigger = class {
 		
 		this.emitter = new PIXI.particles.Emitter(
 			projectile.GP.particleStageLower,
-			particleTex['equilateral.png'],
+			particleTex[projectile.particleName],
 			{
 				alpha: {
 					list: [
@@ -1175,7 +1175,7 @@ visuals.proj_trigger = class {
 	}
 }
 
-visuals.proj_trigger_death = function(GP, posGU, tintString) {
+visuals.proj_trigger_death = function(GP, posGU, tintString, particleName) {
 	let posP = GP.absGU2P(posGU);
 	let colour = tintString;
 	
@@ -1184,7 +1184,7 @@ visuals.proj_trigger_death = function(GP, posGU, tintString) {
 	
 	let emitter = new PIXI.particles.Emitter(
 		GP.particleStageUpper,
-		particleTex['equilateral.png'],
+		particleTex[particleName],
 		{
 			alpha: {
 				list: [
