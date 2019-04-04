@@ -2,9 +2,12 @@
 //	gameplay.js start
 //	***
 
-//const planck = require('../../node_modules/planck-js/dist/planck');
-//const PIXI = require('../../node_modules/pixi.js/dist/pixi');
+//const planck = require('planck-js');
+//const PIXI = require('pixi.js');
 const uuid = require('uuid');
+//const fs = require('fs');
+const PNG = require('pngjs').PNG;
+
 const mix = require('./mixinbuilder');
 const prefabs = require('./prefabs');
 const visuals = require('./visuals');
@@ -223,6 +226,11 @@ function Gameplay(world, app, IH, settings) {
 					other.damage(15);
 					projS.destroy(false);
 					visuals.proj_shotgun_death(this, projS.position, true);
+					
+					if (other._deathTrigger === true && other._deathAngle !== undefined) {
+						let dir = projS.body.getLinearVelocity().clone();
+						other._deathAngle = Math.atan2(dir.y, dir.x);
+					}
 				}
 				else {
 					let vel = this.relM2GU(projS.body.getLinearVelocity());
@@ -250,6 +258,29 @@ function Gameplay(world, app, IH, settings) {
 					//projL.desiredPos = poc.points[0].clone();
 					projL.desiredPos = projL.body.getPosition();
 				}
+			}
+			
+			// enemies and player
+			let aPlayer = typeA === 'player';
+			let bPlayer = typeB === 'player';
+			let aEnemy = (typeA === 'enemy_walker') || (typeA === 'enemy_flier') || (typeA === 'enemy_charger');
+			let bEnemy = (typeB === 'enemy_walker') || (typeB === 'enemy_flier') || (typeB === 'enemy_charger');
+			// Check for charger prow relative speed.
+			if ((typeA === 'enemy_charger_prow') && goA._state === 3) {
+				let linVelA = goA.body.getLinearVelocity();
+				let linVelB = goB.body.getLinearVelocity();
+				let relative = linVelA.clone().sub(linVelB);
+				if (relative.lengthSquared() > (7.5 * 7.5)) { aEnemy = true; }
+			}
+			if ((typeB === 'enemy_charger_prow') && goB._state === 3) {
+				let linVelA = goA.body.getLinearVelocity();
+				let linVelB = goB.body.getLinearVelocity();
+				let relative = linVelB.clone().sub(linVelA);
+				if (relative.lengthSquared() > (7.5 * 7.5)) { bEnemy = true; }
+			}
+			if ((aPlayer ? !bPlayer : bPlayer) && (aEnemy || bEnemy)) {
+				let player	= aPlayer ? goA : goB;
+				player.destroy(false);
 			}
 			
 			
@@ -312,14 +343,18 @@ function Gameplay(world, app, IH, settings) {
 			if (bSmash && !aProjS && Math.abs(totalNormalImpulse) > 50) { goB.destroy(false); }
 			
 			
-			// enemy_walker
-			let aEnemy = typeA === 'enemy_walker' || typeA === 'enemy_flier';
-			let bEnemy = typeB === 'enemy_walker' || typeB === 'enemy_flier';
-			if (aEnemy || bEnemy) {
+			// enemy_walker / enemy_flier / enemy_charger(_prow)
+			let aEnemy = typeA === 'enemy_walker' || typeA === 'enemy_flier' || typeA === 'enemy_charger';
+			let bEnemy = typeB === 'enemy_walker' || typeB === 'enemy_flier' || typeB === 'enemy_charger';
+			
+			let aProw = typeA === 'enemy_charger_prow';
+			let bProw = typeB === 'enemy_charger_prow';
+			
+			if (aEnemy || bEnemy || aProw || bProw) {
 				let worldMan = {points: [], separations: []};
 				contact.getWorldManifold(worldMan);
 				
-				if (Math.abs(worldMan.normal.x) > Math.abs(worldMan.normal.y)) {
+				if ((Math.abs(worldMan.normal.x) - 0.05) > Math.abs(worldMan.normal.y)) {
 					let normPos = (worldMan.normal.x > 0);
 					// Normal points from A to B.
 					if (aEnemy) {
@@ -330,12 +365,38 @@ function Gameplay(world, app, IH, settings) {
 						if (normPos) { goB._leftContact = true; }
 						else { goB._rightContact = true; }
 					}
+					else if (aProw) {
+						if (normPos) { goA._parent._rightContact = true; }
+						else { goA._parent._leftContact = true; }
+					}
+					else if (bProw) {
+						if (normPos) { goB._parent._leftContact = true; }
+						else { goB._parent._rightContact = true; }
+					}
 				}
 			}
 			
+			// enemy_flier_platform
 			
+			let aEnemyP = typeA === 'enemy_flier_platform';
+			let bEnemyP = typeB === 'enemy_flier_platform';
 			
-			let t = 1;
+			if (aEnemyP || bEnemyP) {
+				let P = (aEnemyP) ? goA : goB,
+					O = (aEnemyP) ? goB : goA;
+				
+				let worldMan = {points: [], separations: []};
+				contact.getWorldManifold(worldMan);
+				let testY = (aEnemyP) ? -worldMan.normal.y : worldMan.normal.y;
+				
+				if (testY > -0.5) {
+					let relX = O.position.x - P.position.x;
+					if (relX < -0.125) { P._parent._leftContact = true; }
+					else if (relX > 0.125) { P._parent._rightContact = true; }
+				}
+				else if (O.type === 'player') { P._parent._stunContact = true; }
+			}
+			
 			// ...
 		}
 	});
@@ -356,7 +417,8 @@ Gameplay.prototype.loadLevel = function(level) {
 	
 	// Allows for two objects per space.
 	
-	pixels = this.app.renderer.plugins.extract.pixels(new PIXI.Sprite(level));
+	//pixels = this.app.renderer.plugins.extract.pixels(new PIXI.Sprite(level));
+	pixels = level.data;
 	
 	if (pixels.length !== (34 * 34 * 4)) {
 		console.log("ERROR: Cannot load level, wrong size!");

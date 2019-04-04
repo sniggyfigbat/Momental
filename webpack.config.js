@@ -5,6 +5,12 @@ module.exports = [
 	{
 		name: 'momental',
 		mode: 'production',
+		//node: {
+		//  fs: 'empty'
+		//},
+		//'externals': {
+		//	'fs': "require('fs')"
+		//}
 		entry: {
 			'app': './client/app.js'
 		},

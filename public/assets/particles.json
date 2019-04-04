@@ -32,7 +32,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
 	"sourceSize": {"w":128,"h":128}
 },
-"squares.png":
+"square.png":
 {
 	"frame": {"x":512,"y":0,"w":128,"h":128},
 	"rotated": false,
@@ -40,7 +40,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
 	"sourceSize": {"w":128,"h":128}
 },
-"triangle0.png":
+"squares.png":
 {
 	"frame": {"x":640,"y":0,"w":128,"h":128},
 	"rotated": false,
@@ -48,7 +48,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
 	"sourceSize": {"w":128,"h":128}
 },
-"triangle1.png":
+"triangle0.png":
 {
 	"frame": {"x":768,"y":0,"w":128,"h":128},
 	"rotated": false,
@@ -56,9 +56,17 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
 	"sourceSize": {"w":128,"h":128}
 },
-"triangle2.png":
+"triangle1.png":
 {
 	"frame": {"x":896,"y":0,"w":128,"h":128},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
+	"sourceSize": {"w":128,"h":128}
+},
+"triangle2.png":
+{
+	"frame": {"x":1024,"y":0,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -72,8 +80,8 @@
 	"version": "1.0",
 	"image": "particles.png",
 	"format": "RGBA8888",
-	"size": {"w":1024,"h":128},
+	"size": {"w":1152,"h":128},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:2a9b6ccda4090b4d3843f5183ec447a9:7945fd2586af5efb64c21e9ec6272697:767f0aa26e08023d62afa20c0c952bea$"
+	"smartupdate": "$TexturePacker:SmartUpdate:3ddca3eb17731bdd2fa0589b6461def9:3410f9067d293f634d4f4e140b67eee4:767f0aa26e08023d62afa20c0c952bea$"
 }
 }

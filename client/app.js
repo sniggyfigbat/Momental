@@ -2,13 +2,18 @@
 //	app.js start
 //	***
 
-//var planck = require('../node_modules/planck-js/dist/planck');
-//require('../node_modules/pixi.js/dist/pixi');
-//require('../node_modules/pixi-particles/dist/pixi-particles');
+//const planck = require('planck-js');
+//const PIXI = require('pixi.js');
+const uuid = require('uuid');
+//import * as fs from 'fs';
+const PNG = require('pngjs/browser').PNG;
 
 let Gameplay;
 var GP;
 var utils = require('./js/utils');
+
+//var fs = require('fs'),
+//	PNG = require('pngjs').PNG;
 
 let type = "WebGL";
 
@@ -165,8 +170,7 @@ setupApp();
 loader
 	.add([ // Add assets to import below:
 		"assets/gameplay.json",
-		"assets/particles.json",
-		"TestLevel.png"
+		"assets/particles.json"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -224,7 +228,34 @@ function loadLevel(levelData) {
 		meterOrigin:		Vec2(0, 0)					// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
 	});
 	
-	GP.loadLevel(resources["TestLevel.png"].texture);
+	let levelStream;
+	
+	let fetchLevelProm = fetch('./levels/TestLevel.png').then(
+		(response) => {
+			if (response.status !== 200) {
+				console.log('Issue loading level file from server. Status Code: ' + response.status);
+				return;
+			}
+			
+			return response;
+		}
+	)
+	.then(response => response.arrayBuffer())
+	.then(buffer => {
+		levelStream = new PNG({ filterType:4 }).parse( buffer, function(error, data) {
+			if (error != null) { console.log('ERROR: In level image read; ' + error); }
+			else { GP.loadLevel(levelStream); }
+		});
+	})
+	.catch(function(err) {
+		console.log('Fetch Error: ', err);
+	});
+		
+	/*	.on('parsed'), function() {
+			
+		}*/
+	
+	//GP.loadLevel(resources[""].texture);
 	
 	GP.trigger_end_victory = () => {
 		console.log('Hooray! You win!');

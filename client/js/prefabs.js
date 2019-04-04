@@ -2,6 +2,12 @@
 //	prefabs.js start
 //	***
 
+//const planck = require('planck-js');
+//const PIXI = require('pixi.js');
+const uuid = require('uuid');
+//const fs = require('fs');
+const PNG = require('pngjs');
+
 let Sprite = PIXI.Sprite,
 	Vec2 = planck.Vec2,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures,
@@ -294,7 +300,7 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 			let proj = this.GP.makeObject('proj_trigger', null, offset.add(myPos), spawnAngle + ninetyDeg, {
 				origin: this,
 				effectType:		'addAmmo',
-				particleName:	'squares.png',
+				particleName:	'square.png',
 				tint:			projTint,
 				tintString:		projTintStr,
 				targetFunction:	'destroy',
@@ -1283,7 +1289,7 @@ prefabs.mixins['weapon_shotgun'] = (superclass) => class extends superclass {
 			
 			let pelletImpStr = 75 * fif;
 			let playerImpStr = 30 * fif;
-			let halfAngle = ((1 - (this.charge / this.chargeMax)) * (utils.PI/18)) + (utils.PI/36); // Angle somewhere between 5 and 15 degrees, proportional to charge.
+			let halfAngle = ((1 - (this.charge / this.chargeMax)) * (utils.PI/24)) + (utils.PI/72); // Angle somewhere between 2.5 and 10 degrees, proportional to charge.
 			
 			let imp, offset, spawnPos, pellet, plImp;
 			
@@ -2231,13 +2237,141 @@ prefabs.mixins['player_goal'] = (superclass) => class extends superclass {
 //	Enemy mixins
 //	***
 
+prefabs.mixins['spawner_enemy_walker'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		
+		opts.maxCount = (bitB & 0x0f);
+		opts.cooldown = ((bitB & 0xf0) >>> 4);
+		
+		if (opts.maxCount === 0) { opts.maxCount = 5; }
+		if (opts.cooldown === 0) { opts.cooldown = 3; }
+
+		opts.rotCat = (bitA & 0x06) >>> 1;
+		
+		return opts;
+	}
+	
+	setup(options) {
+		this.preset = {
+			rotation: options.rotCat,
+			maxCount: options.maxCount,
+			cooldown: options.cooldown * 1000
+		}
+		
+		this.spawns = [];
+		this._cooldown = this.preset.cooldown;
+		this._nextSpawnDir = 0;
+		
+		// Ugly but probably faster than trig:
+		if (this.preset.rotation === 1)			{ this.spawnOffset = Vec2(0, 1); }
+		else if (this.preset.rotation === 2)	{ this.spawnOffset = Vec2(-1, 0); }
+		else if (this.preset.rotation === 3)	{ this.spawnOffset = Vec2(0, -1); }
+		else									{ this.spawnOffset = Vec2(1, 0); }
+		
+		this.sprites.timer = new PIXI.Graphics();
+		this.sprites.timer.zIndex = 15;
+		this.sprites.timer.tint = 0xff0000;
+		this.sprites.addChild(this.sprites.timer);
+		this._totalTimerSlices = 16;
+		this._currentTimerSlices = 0;
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		if (super.update) super.update(deltaMS);
+		
+		if (this.spawns.length < this.preset.maxCount) {
+			this._cooldown -= deltaMS;
+			if (this._cooldown < 0) { this._cooldown = 0; }
+		}
+		
+		let cooldownSlices = Math.round((1 - (this._cooldown / this.preset.cooldown)) * this._totalTimerSlices);
+		if (cooldownSlices !== this._currentTimerSlices) {
+			this._currentTimerSlices = cooldownSlices;
+			this.redrawTimer();
+		}
+		
+		if (this._cooldown === 0) {
+			this._cooldown = this.preset.cooldown;
+			let spawnPos = this.position.clone().add(this.spawnOffset),
+				direction;
+				
+			let blocked = false;
+			let lower = spawnPos.clone().sub(Vec2(0.25, 0.25));
+			let upper = spawnPos.clone().add(Vec2(0.25, 0.25));
+			let aabb = planck.AABB(lower, upper);
+			this.GP.world.queryAABB(aabb, (fixture) => {
+				if (fixture.m_filterCategoryBits & 0x0020) { blocked = true; }
+			});
+			
+			if (this.preset.rotation === 0)			{ direction = 1; }
+			else if (this.preset.rotation === 2)	{ direction = 0; }
+			else {
+				direction = this._nextSpawnDir;
+				this._nextSpawnDir = (this._nextSpawnDir === 0) ? 1 : 0;
+			}
+			
+			if (!blocked) {
+				let newEnemy = this.GP.makeObject('enemy_walker', null, spawnPos, 0, {
+					spawner: this,
+					startGoingRight: direction
+				});
+				this.spawns.push(newEnemy);
+			}
+		}
+	}
+	
+	redrawTimer() {
+		let angle = this.rotation - utils.PI / 2,
+			subAngle = utils.TAU / this._totalTimerSlices,
+			innerRad = this.GP.relGU2P(0.625 * 0.5),
+			outerRad = this.GP.relGU2P(0.875 * 0.5);
+		
+		if (this._currentTimerSlices === 0) {
+			this.sprites.timer.visible = false;
+			return;
+		}
+		else { this.sprites.timer.visible = true; }
+		
+		this.sprites.timer.clear();
+			
+		for (let i = 0; i < this._currentTimerSlices; i++) {
+			let nextAng = angle + subAngle;
+			
+			this.sprites.timer.lineStyle(0, 0, 0);
+			this.sprites.timer.beginFill(0xffffff, 1);
+			
+			let points = [];
+			points.push(new PIXI.Point(Math.cos(angle) * innerRad, Math.sin(angle) * innerRad));
+			points.push(new PIXI.Point(Math.cos(angle) * outerRad, Math.sin(angle) * outerRad));
+			points.push(new PIXI.Point(Math.cos(nextAng) * outerRad, Math.sin(nextAng) * outerRad));
+			points.push(new PIXI.Point(Math.cos(nextAng) * innerRad, Math.sin(nextAng) * innerRad));
+			
+			this.sprites.timer.drawPolygon(points);
+			
+			angle = nextAng;
+		}
+	}
+	
+	removeFromSpawnList(enemy) {
+		let index = this.spawns.findIndex((element) => (element === enemy));
+		if (index != null && index !== -1) { this.spawns.splice(index, 1); }
+	}
+	
+	destructor(options) {
+		if (super.destructor) super.destructor(options);
+	}
+}
+
 prefabs.mixins['enemy_walker'] = (superclass) => class extends superclass {
 	translateOptions(bitA, bitB) {
 		let opts = super.translateOptions(bitA, bitB);
 		
 		opts.startGoingRight = (bitA & 0x04) != 0;
 				
-		opts.maxHP = 35;
+		opts.maxHP = 20;
 
 		return opts;
 	}
@@ -2245,8 +2379,9 @@ prefabs.mixins['enemy_walker'] = (superclass) => class extends superclass {
 	setup(options) {
 		this.sprites.body	= this.sprites.children[0];
 		this.sprites.arrow	= this.sprites.children[1];
-		this.sprites.excla	= this.sprites.children[2];
+		this.sprites.stop	= this.sprites.children[2];
 		
+		this._spawner = (options.spawner != null) ? options.spawner : null;
 		this._nextDirState = options.startGoingRight ? 1 : 0;
 		this._state = options.startGoingRight ? 1 : 0;
 		/*
@@ -2256,11 +2391,15 @@ prefabs.mixins['enemy_walker'] = (superclass) => class extends superclass {
 		 *	2:	In the air.
 		*/
 		
+		this._field_kill_applicable = true;
+		
 		this._leftContact = false;
 		this._rightContact = false;
 		this._exclaTimeout = 0;
 		this._stateChangeCooldown = 0;
 		this._stoppedCountup = 0;
+		
+		this._deathAngle = null;
 		
 		// Setup ground sensor.
 		this.groundSensor = this.GP.makeObject('enemy_sensor', this.name + '_sensor', this.position.clone().sub(Vec2(0.0, 0.5)), 0);
@@ -2293,11 +2432,12 @@ prefabs.mixins['enemy_walker'] = (superclass) => class extends superclass {
 			if (this._state !== 2) {
 				this._state = 2;
 			}
-			else if (this._state === 0 && this._leftContact && this._stateChangeCooldown === 0) {
+			
+			if (this._nextDirState === 0 && this._leftContact && this._stateChangeCooldown === 0) {
 				this._nextDirState = 1;
 				this._stateChangeCooldown = 1000;
 			}
-			else if (this._state === 1 && this._rightContact && this._stateChangeCooldown === 0) {
+			else if (this._nextDirState === 1 && this._rightContact && this._stateChangeCooldown === 0) {
 				this._nextDirState = 0;
 				this._stateChangeCooldown = 1000;
 			}
@@ -2331,20 +2471,20 @@ prefabs.mixins['enemy_walker'] = (superclass) => class extends superclass {
 		if (this._state < 2) {
 			// Moving
 			this.sprites.arrow.visible = true;
-			this.sprites.excla.visible = false;
+			this.sprites.stop.visible = false;
 			
 			let dirFac = (this._state === 1) ? -1 : 1;
 			let angVel1 = dirFac * angVel;
-			if (angVel1 < 6 * this.fieldImpFac) { this.body.applyTorque(dirFac * 10 * this.fieldImpFac), true; }
+			if (angVel1 < 10 * this.fieldImpFac) { this.body.applyTorque(dirFac * 15 * this.fieldImpFac, true); }
 		}
 		else {
 			// In the air.
 			this.sprites.arrow.visible = false;
-			this.sprites.excla.visible = true;
+			this.sprites.stop.visible = true;
 			
 			// Just dampen rotation.
-			if (angVel < 0) { this.body.applyTorque(10 * this.fieldImpFac), true; }
-			if (angVel > 0) { this.body.applyTorque(-10 * this.fieldImpFac), true; }
+			if (angVel < 0) { this.body.applyTorque(15 * this.fieldImpFac, true); }
+			if (angVel > 0) { this.body.applyTorque(-15 * this.fieldImpFac, true); }
 		}
 		
 		// Reset collision listener triggers
@@ -2353,15 +2493,537 @@ prefabs.mixins['enemy_walker'] = (superclass) => class extends superclass {
 		
 		if (super.update) super.update(deltaMS);
 		this.sprites.arrow.rotation	= (this._state === 1) ? this.rotation : this.rotation + utils.PI;
-		this.sprites.excla.rotation	= this.rotation;
+		this.sprites.stop.rotation	= this.rotation;
 		
 		this.groundSensor.update(deltaMS);
 	}
 	
 	destructor(options) {
+		if (this._spawner != null) { this._spawner.removeFromSpawnList(this); }
+		
 		this.groundSensor.destroy(true);
 		if (super.destructor) super.destructor(options);
+		let deathRot;
+		if (this._deathAngle != null) {deathRot = this._deathAngle; }
+		else {
+			let linVel = this.body.getLinearVelocity();
+			deathRot = Math.atan2(linVel.y, linVel.x);
+		}
+		visuals.enemy_death(this.GP, this.position, deathRot);
 	}
+}
+
+prefabs.mixins['enemy_flier'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		
+		opts.startGoingRight = (bitA & 0x04) != 0;
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		this.sprites.bodyMain	= this.sprites.children[0];
+		this.sprites.bodyUpper	= this.sprites.children[1];
+		this.sprites.arrow		= this.sprites.children[2];
+		this.sprites.stop		= this.sprites.children[3];
+		
+		this._desiredHeight = this.position.y;
+		this._nextDirState = options.startGoingRight ? 1 : 0;
+		this._state = options.startGoingRight ? 1 : 0;
+		/*
+		 *	Behaviour States:
+		 *	0:	Going left.
+		 *	1:	Going right.
+		 *	2:	Stunned
+		*/
+		
+		// Platform subassembly setup
+		this.body.setFixedRotation(true);
+		this.platform = this.GP.makeObject('enemy_flier_platform', this.name + '_platform', this.position, 0, { parentFlier: this });
+		let joint1 = this.GP.world.createJoint(planck.WeldJoint({
+				frequencyHz : 0.0,
+				dampingRatio : 0.0,
+				localAnchorA: 0,
+				localAnchorB: 0,
+				referenceAngle: 0
+			}, this.body, this.platform.body));
+		
+		this._field_kill_applicable = true;
+		
+		this._leftContact = false;
+		this._rightContact = false;
+		this._stunContact = false;
+		this._exclaTimeout = 0;
+		this._stateChangeCooldown = 0;
+		this._stoppedCountup = 0;
+		
+		this._deathAngle = null;
+		
+		// Setup upper and lower sensor.
+		this.upperSensor = this.GP.makeObject('enemy_sensor', this.name + '_sensor_upper', this.position.clone().add(Vec2(0.0, 0.5)), 0);
+		this.upperSensor.body.setFixedRotation(true);
+		let joint2 = this.GP.world.createJoint(planck.RevoluteJoint({
+			localAnchorA: Vec2(0, 0),
+			localAnchorB: Vec2(0.0, -0.5)
+		}, this.body, this.upperSensor.body));
+		
+		this.lowerSensor = this.GP.makeObject('enemy_sensor', this.name + '_sensor_lower', this.position.clone().sub(Vec2(0.0, 0.5)), 0);
+		this.lowerSensor.body.setFixedRotation(true);
+		let joint3 = this.GP.world.createJoint(planck.RevoluteJoint({
+			localAnchorA: Vec2(0, 0),
+			localAnchorB: Vec2(0.0, 0.5)
+		}, this.body, this.lowerSensor.body));
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		let linVel = this.body.getLinearVelocity(),
+			velSq = linVel.lengthSquared();
+		
+		this.platform.updateContact();
+		
+		this._stateChangeCooldown -= deltaMS;
+		if (this._stateChangeCooldown < 0) { this._stateChangeCooldown = 0; }
+		if (velSq < 1 && !this._stunContact) {
+			this._exclaTimeout -= deltaMS;
+			if (this._exclaTimeout < 0) { this._exclaTimeout = 0; }
+		}
+		if (velSq < 0.1) { this._stoppedCountup += deltaMS; }
+		else {this._stoppedCountup = 0; }
+		
+		
+		let stuffAbove = (this.upperSensor.body.getContactList() != null),
+			stuffBelow = (this.lowerSensor.body.getContactList() != null);
+		
+		// Check collisions and sensor, update state.
+		if (this._stunContact) {
+			
+			if (this._state !== 2) {
+				this._state = 2;
+			}
+			
+			if (this._nextDirState === 0 && this._leftContact && this._stateChangeCooldown === 0) {
+				this._nextDirState = 1;
+				this._stateChangeCooldown = 1000;
+			}
+			else if (this._nextDirState === 1 && this._rightContact && this._stateChangeCooldown === 0) {
+				this._nextDirState = 0;
+				this._stateChangeCooldown = 1000;
+			}
+			
+			this._exclaTimeout = 1500;
+		}
+		else {
+			if (this._state === 0 && (this._leftContact || linVel.x > 1) && this._stateChangeCooldown === 0) {
+				this._state = 1;
+				this._nextDirState = 1;
+				this._stateChangeCooldown = 1000;
+			}
+			else if (this._state === 1 && (this._rightContact || linVel.x < -1) && this._stateChangeCooldown === 0) {
+				this._state = 0;
+				this._nextDirState = 0;
+				this._stateChangeCooldown = 1000;
+			}
+			else if (this._state === 2 && this._exclaTimeout === 0 && velSq < 1) {
+				this._state = this._nextDirState;
+				this._stateChangeCooldown = 1000;
+			}
+			
+			if (this._state < 2 && this._stoppedCountup > 2000) {
+				this._state = (this._state === 1) ? 0 : 1;
+				this._nextDirState = this._state;
+				this._stoppedCountup = 0;
+			}
+		}
+		
+		let totalForce = 10 * this.fieldImpFac,
+			frictionForce = 5 * this.fieldImpFac;
+		
+		// 'Friction'.
+			let friction = linVel.clone().mul(-1);
+			friction.normalize(),
+			friction.mul(frictionForce);
+		
+		// Implement state.
+		if (this._state < 2) {
+			// Moving. Get x and y, normalize, give a set total force.
+			this.sprites.arrow.visible = true;
+			this.sprites.stop.visible = false;
+			
+			let dirFac = (this._state === 1) ? 1 : -1,
+				linVel1 = linVel.clone().mul(dirFac),
+				xComp = (linVel1.x < 5 * this.fieldImpFac) ? 1 * dirFac : 0;
+			
+			let relY = this.position.y - this._desiredHeight,
+				yComp = 0;
+			if (relY < 0 && !stuffAbove) { yComp = (relY > -2)	? relY * -0.5 : 1; }
+			if (relY > 0 && !stuffBelow) { yComp = (relY < 2)	? relY * -0.5 : -1; }
+			
+			let force = Vec2(xComp, yComp);
+			force.normalize();
+			force.mul(totalForce);
+			
+			force.add(friction);
+			
+			this.body.applyForce(force, this.position, true);
+		}
+		else {
+			// Stunned.
+			this.sprites.arrow.visible = false;
+			this.sprites.stop.visible = true;
+			
+			// Just add friction.
+			this.body.applyForce(friction, this.position, true);
+		}
+		
+		// Reset collision listener triggers
+		this._leftContact = false;
+		this._rightContact = false;
+		this._stunContact = false;
+		
+		if (super.update) super.update(deltaMS);
+		this.sprites.arrow.rotation	= (this._state === 1) ? 0 : utils.PI;
+		//this.sprites.excla.rotation	= 0;
+		
+		this.platform.update(deltaMS);
+		this.upperSensor.update(deltaMS);
+		this.lowerSensor.update(deltaMS);
+	}
+	
+	destructor(options) {
+		if (this._spawner != null) { this._spawner.removeFromSpawnList(this); }
+		
+		this.platform.destroy(true);
+		this.upperSensor.destroy(true);
+		this.lowerSensor.destroy(true);
+		
+		if (super.destructor) super.destructor(options);
+		
+		let deathRot;
+		if (this._deathAngle != null) {deathRot = this._deathAngle; }
+		else {
+			let linVel = this.body.getLinearVelocity();
+			deathRot = Math.atan2(linVel.y, linVel.x);
+		}
+		visuals.enemy_death(this.GP, this.position, deathRot);
+	}
+}
+
+prefabs.mixins['enemy_flier_platform'] = (superclass) => class extends superclass {
+	setup(options) {
+		this._parent = options.parentFlier;
+		this.body.setFixedRotation(true);
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	updateContact() {
+		for (let c = this.body.getContactList(); c != null; c = c.next) {
+			let otherIsPlayer = (c.other.gameobject != null) ? (c.other.gameobject.type === 'player') : false;
+			if (otherIsPlayer) { this._parent._stunContact = true; }
+		}
+	}
+	
+	//damage(lostHP) {
+		//this._parent.damage(lostHP);
+	//}
+}
+
+prefabs.mixins['enemy_charger'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		
+		opts.startGoingRight = (bitA & 0x04) != 0;
+				
+		opts.maxHP = 20;
+
+		return opts;
+	}
+	
+	setup(options) {
+		this.sprites.body	= this.sprites.children[0];
+		this.sprites.arrow	= this.sprites.children[1];
+		this.sprites.stop	= this.sprites.children[2];
+		this.sprites.excla	= this.sprites.children[3];
+		
+		this._nextDirState = options.startGoingRight ? 1 : 0;
+		this._state = options.startGoingRight ? 1 : 0;
+		/*
+		 *	Behaviour States:
+		 *	0:	Going left.
+		 *	1:	Going right.
+		 *	2:	Stunned, either because in air or goomba'd or charge-end.
+		 *	3:	Spotting
+		 *	4:	Charging
+		 *	5:	Righting
+		*/
+		
+		this._field_kill_applicable = true;
+		
+		this._stunContact = false;
+		this._leftContact = false;
+		this._rightContact = false;
+		this._stunTimeout = 0;			// Current duration of stunned state
+		this._spotCountdown = 0;		// Countdown for spotting behaviour, after which to transition into charging. Also used for righting.
+		this._stateChangeCooldown = 0;	// Cooldown on switching between states (mostly direction)
+		this._stoppedCountup = 0;		// How long the charger has been still for when it should be moving. After a while, assumes is stuck and will reverse direction.
+		
+		this._prowLock = 2;				// 0 - left, 1 - right, 2 - up, 3 - unlocked
+		this._desProwLock = 2;
+		
+		this._deathAngle = null;
+		
+		this._playerRef = null;
+		
+		// Setup prow
+		this.prow = this.GP.makeObject('enemy_charger_prow', this.name + '_prow', this.position, 0, {parentCharger: this});
+		this.prow.body.setFixedRotation(true);
+		let joint1 = this.GP.world.createJoint(planck.RevoluteJoint({
+			localAnchorA: Vec2(0, 0),
+			localAnchorB: Vec2(0.0, 0.0)
+		}, this.body, this.prow.body));
+		
+		// Setup ground sensor.
+		this.groundSensor = this.GP.makeObject('enemy_sensor', this.name + '_sensor', this.position.clone().sub(Vec2(0.0, 0.5)), 0);
+		this.groundSensor.body.setFixedRotation(true);
+		let joint2 = this.GP.world.createJoint(planck.RevoluteJoint({
+			localAnchorA: Vec2(0, 0),
+			localAnchorB: Vec2(0.0, 0.5)
+		}, this.body, this.groundSensor.body));
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	update(deltaMS) {
+		let angVel = this.body.getAngularVelocity(),
+			linVel = this.body.getLinearVelocity();
+		
+		this._stateChangeCooldown -= deltaMS;
+		if (this._stateChangeCooldown < 0) { this._stateChangeCooldown = 0; }
+		
+		if (Math.abs(angVel) < 0.5) {
+			this._stunTimeout -= deltaMS;
+			if (this._stunTimeout < 0) { this._stunTimeout = 0; }
+		}
+		
+		this._spotCountdown -= deltaMS;
+		if (this._spotCountdown < 0) { this._spotCountdown = 0; }
+		
+		if (Math.abs(angVel) < 0.1 || linVel.lengthSquared() < 0.5) { this._stoppedCountup += deltaMS; }
+		else {this._stoppedCountup = 0; }
+		
+		let touchingGround = (this.groundSensor.body.getContactList() != null),
+			chargeTrigger = false;
+			
+		// Charge trigger check
+		if (this._playerRef == null) { this._playerRef = this.GP.getObjectsOfType('player', false)[0]; }
+		if (this._state < 2 && this._playerRef != null) {
+			// Check if in facing direction, and if at right y-level
+			let playerPos = this._playerRef.position.clone(),
+				horCheck = this._state === 0 ? (this.position.x > playerPos.x) : (this.position.x < playerPos.x),
+				verCheck = (Math.abs(this.position.y - playerPos.y) < 0.5);
+			
+			chargeTrigger = (horCheck && verCheck);
+		}
+		
+		// Check collisions and sensor, update state.
+		if ((!touchingGround || this._stunContact) && (this._state < 3 || this._state === 5)) {
+			// Stun logic
+			if (this._state !== 2) {
+				this._state = 2;
+			}
+			
+			if (this._nextDirState === 0 && this._leftContact && this._stateChangeCooldown === 0) {
+				this._nextDirState = 1;
+				this._stateChangeCooldown = 1000;
+			}
+			else if (this._nextDirState === 1 && this._rightContact && this._stateChangeCooldown === 0) {
+				this._nextDirState = 0;
+				this._stateChangeCooldown = 1000;
+			}
+			
+			this._stunTimeout = 1500;
+		}
+		else if (this._state === 2 && this._stunTimeout === 0 && Math.abs(angVel) < 0.5) {
+			if (this._desProwLock !== 2) {
+				// Exiting a charge stun
+				this._prowLock = 3;
+				this._desProwLock = 2;
+				this._state = 5;
+				this._stateChangeCooldown = 1000;
+				this._spotCountdown = 1000;
+				
+				this.prow.body.setFixedRotation(false);
+			}
+			else {
+				// Exiting a normal stun
+				this._state = this._nextDirState;
+				this._stateChangeCooldown = 1000;
+			}
+		}
+		else if (this._state < 2 && chargeTrigger) {
+			// Activate a charge, switch to spotting
+			this._prowLock = 3;
+			this._desProwLock = this._state;
+			this._state = 3;
+			this._stateChangeCooldown = 1000;
+			this._spotCountdown = 1000;
+			
+			this.prow.body.setFixedRotation(false);
+		}
+		else if (this._state === 3 && this._spotCountdown === 0) {
+			this._state = 4;
+			this._stateChangeCooldown = 1000;
+		}
+		else if (this._state === 4) {
+			let hitObs = this._desProwLock === 0 ? this._leftContact : this._rightContact;
+			let rollBack = this._desProwLock === 0 ? angVel < -0.5 : angVel > 0.5;
+			let stopped = (this._stateChangeCooldown === 0 && this._stoppedCountup > 1000);
+			if (hitObs || rollBack || stopped) {
+				this._state = 2;
+				this._stateChangeCooldown = 1000;
+				this._stunTimeout = 1500;
+			}
+		}
+		else if (this._state === 5 && this._spotCountdown === 0) {
+			this._state = this._nextDirState;
+			this._stateChangeCooldown = 1000;
+		}
+		else if (this._state === 0 && (this._leftContact || angVel < -0.5) && this._stateChangeCooldown === 0) {
+			this._state = 1;
+			this._nextDirState = 1;
+			this._stateChangeCooldown = 1000;
+		}
+		else if (this._state === 1 && (this._rightContact || angVel > 0.5)  && this._stateChangeCooldown === 0) {
+			this._state = 0;
+			this._nextDirState = 0;
+			this._stateChangeCooldown = 1000;
+		}
+		else if (this._state < 2 && this._stoppedCountup > 2000) {
+			this._state = (this._state === 1) ? 0 : 1;
+			this._nextDirState = this._state;
+			this._stoppedCountup = 0;
+		}
+		
+		// Implement state.
+		if (this._state < 2) {
+			// Moving
+			this.sprites.arrow.visible = true;
+			this.sprites.stop.visible = false;
+			this.sprites.excla.visible = false;
+			
+			let dirFac = (this._state === 1) ? -1 : 1;
+			let angVel1 = dirFac * angVel;
+			if (angVel1 < 10 * this.fieldImpFac) { this.body.applyTorque(dirFac * 15 * this.fieldImpFac, true); }
+		}
+		else if (this._state === 4) {
+			// Charging
+			this.sprites.arrow.visible = false;
+			this.sprites.stop.visible = false;
+			this.sprites.excla.visible = true;
+			
+			let dirFac = (this._desProwLock === 1) ? -1 : 1;
+			let angVel1 = dirFac * angVel;
+			if (angVel1 < 30 * this.fieldImpFac) { this.body.applyTorque(dirFac * 30 * this.fieldImpFac, true); }
+		}
+		else {
+			// stunned or in a charge transition.
+			this.sprites.arrow.visible = false;
+			this.sprites.stop.visible = (this._state !== 3);
+			this.sprites.excla.visible = (this._state === 3);
+			
+			// Just dampen rotation.
+			if (angVel < 0) { this.body.applyTorque(15 * this.fieldImpFac, true); }
+			if (angVel > 0) { this.body.applyTorque(-15 * this.fieldImpFac, true); }
+		}
+	
+		// Prow rotation
+		if (this._desProwLock !== this._prowLock) {
+			// try to right the prow to the desired direction.
+			this._prowLock = 3;
+			
+			let prowAng = this.prow.body.getAngle(),
+				prowAngVel = this.prow.body.getAngularVelocity(),
+				desAng = 0;
+			
+			if (this._desProwLock === 0) { desAng = (utils.PI * 0.5) - 0.05; }
+			else if (this._desProwLock === 1) { desAng = -(utils.PI * 0.5) + 0.05; }
+			else if (this._desProwLock === 2) { desAng = 0; }
+			
+			let relAng = utils.bearingDelta(prowAng, desAng);
+				
+			if (Math.abs(relAng) < (utils.PI / 180) && Math.abs(prowAngVel) < 0.05) {
+				// Basically upright, basically stable.
+				this.prow.body.setTransform(this.prow.body.getPosition(), desAng);
+				this.prow.body.setFixedRotation(true);
+				this._prowLock = this._desProwLock;
+			}
+			else {
+				let signFac = relAng < 0 ? -1 : 1;
+					
+				if (prowAngVel * signFac < 1) {
+					//let prop = Math.abs(relAng) < (utils.PI / 12) ? relAng / (utils.PI / 12) : signFac,
+					//	torque = prop * this.fieldImpFac * 50;
+					let torque = signFac * this.fieldImpFac * 100;
+					
+					this.prow.body.applyTorque(torque, this.position);
+				}
+			}
+		}
+		
+		// Reset collision listener triggers
+		this._stunContact = false;
+		this._leftContact = false;
+		this._rightContact = false;
+		
+		if (super.update) super.update(deltaMS);
+		this.sprites.body.rotation	= this.rotation - this.prow.rotation;
+		this.sprites.arrow.rotation	= (this._state === 1) ? this.rotation : this.rotation + utils.PI;
+		this.sprites.stop.rotation	= this.rotation;
+		this.sprites.excla.rotation	= this.rotation;
+		
+		this.prow.update(deltaMS);
+		this.groundSensor.update(deltaMS);
+	}
+	
+	destructor(options) {
+		if (this._spawner != null) { this._spawner.removeFromSpawnList(this); }
+		
+		this.prow.destroy(true);
+		this.groundSensor.destroy(true);
+		if (super.destructor) super.destructor(options);
+		let deathRot;
+		if (this._deathAngle != null) {deathRot = this._deathAngle; }
+		else {
+			let linVel = this.body.getLinearVelocity();
+			deathRot = Math.atan2(linVel.y, linVel.x);
+		}
+		visuals.enemy_death(this.GP, this.position, deathRot);
+	}
+}
+
+prefabs.mixins['enemy_charger_prow'] = (superclass) => class extends superclass {
+	setup(options) {
+		this._parent = options.parentCharger;
+		this.body.setFixedRotation(true);
+		
+		if (super.setup) super.setup(options);
+	}
+	
+	updateContact() {
+		for (let c = this.body.getContactList(); c != null; c = c.next) {
+			let otherIsPlayer = (c.other.gameobject != null) ? (c.other.gameobject.type === 'player') : false;
+			if (otherIsPlayer) { this._parent._stunContact = true; }
+		}
+	}
+	
+	//damage(lostHP) {
+		//this._parent.damage(lostHP);
+	//}
 }
 
 //	_______________________________________________________
@@ -2569,7 +3231,7 @@ prefabs.door_key = {
 	fixtures: [
 		{
 			name: 'Key',
-			shape: planck.Circle(0.5),
+			shape: planck.Circle(0.48),
 			
 			density: 20.0,
 			friction: 0.75,
@@ -2693,6 +3355,41 @@ prefabs.field_dec = {
 	mixins: []
 };
 
+prefabs.field_block = {
+	name: "field_block",
+	tags: ['static', 'terrain'],
+	zIndex: 30,
+	sprites: [
+		{
+			tex: "__rect",
+			tint: 0xffdf00,
+			alpha: 0.5,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'field',
+			shape: planck.Box(0.5, 0.5),
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0040,
+			filterMaskBits: 0x0001
+		}
+	],
+	mixins: []
+};
+
 //	***
 //	Define player and weapon prefabs.
 //	***
@@ -2739,7 +3436,7 @@ prefabs.player = {
 	fixtures: [
 		{
 			name: 'Body',
-			shape: planck.Circle(0.5),
+			shape: planck.Circle(0.48),
 			
 			density: 10.0,
 			friction: 0.5,
@@ -3361,6 +4058,41 @@ prefabs.player_goal = {
 //	Enemies
 //	***
 
+prefabs.spawner_enemy_walker = {
+	name: "spawner_enemy_walker",
+	tags: ['static', 'terrain'],
+	zIndex: 36,
+	sprites: [
+		{
+			tex: "spawner_walker.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10
+		}
+	],
+	body: {
+		type: 'static'//,
+		//active: false
+	},
+	fixtures: [
+		{
+			name: 'Block',
+			shape: planck.Box(0.5, 0.5),
+			
+			density: 5.0,
+			friction: 0.75,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0020,
+			//filterMaskBits: 0x60,
+		}
+	],
+	mixins: [ 'loading_90rot', 'spawner_enemy_walker' ]
+};
+
 prefabs.enemy_sensor = {
 	name: "enemy_sensor",
 	tags: ['dynamic', 'enemy', 'subassembly'],
@@ -3422,7 +4154,7 @@ prefabs.enemy_walker = {
 			zIndex: 15
 		},
 		{
-			tex: "enemy_symbol_exclamation.png",
+			tex: "enemy_symbol_stop.png",
 			tint: 0xffffff,
 			anchor: Vec2(0.5, 0.5),
 			scale: Vec2(0.5, 0.5),
@@ -3438,9 +4170,9 @@ prefabs.enemy_walker = {
 	fixtures: [
 		{
 			name: 'body',
-			shape: planck.Circle(0.5),
+			shape: planck.Circle(0.48),
 			
-			density: 10.0,
+			density: 15.0,
 			friction: 0.5,
 			restitution: 0.25,
 			
@@ -3449,6 +4181,201 @@ prefabs.enemy_walker = {
 		}
 	],
 	mixins: [ 'leavestrail', 'takes_damage', 'enemy_walker' ]
+};
+
+prefabs.enemy_flier = {
+	name: "enemy_flier",
+	tags: ['dynamic', 'gameplay', 'enemy', 'takes_damage'],
+	zIndex: 21,
+	sprites: [
+		{
+			tex: "__triangle",
+			tint: 0xff0000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, -0.125),
+			rot: utils.PI,
+			zIndex: 10
+		},
+		{
+			tex: "__triangle",
+			tint: 0x000000,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1.0, 1.0),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 11,
+			points:	[
+				new PIXI.Point((0.57735026919 * 0.75),	-(0.25 + 0.125)),
+				new PIXI.Point((-0.57735026919 * 0.75),	-(0.25 + 0.125)),
+				new PIXI.Point(0,				-0.125)
+			]
+		},
+		{
+			tex: "enemy_symbol_arrow.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, -0.125),
+			rot: 0,
+			zIndex: 15
+		},
+		{
+			tex: "enemy_symbol_stop.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, -0.125),
+			rot: 0,
+			zIndex: 16,
+			visible: false
+		}
+	],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Polygon([
+				Vec2((0.57735026919  * 0.625),	0.25),
+				Vec2((-0.57735026919 * 0.625),	0.25),
+				Vec2(0,	(-0.5 + 0.125)),
+			]),
+			
+			density: 15.0,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0004,
+			filterMaskBits: 0xf363
+		}
+	],
+	mixins: [ 'leavestrail', 'takes_damage', 'enemy_flier' ]
+};
+
+prefabs.enemy_flier_platform = {
+	name: "enemy_flier_platform",
+	tags: ['dynamic', 'gameplay', 'subassembly'],
+	zIndex: 20,
+	sprites: [],
+	body: {
+		type: 'dynamic',
+		gravityScale: 0
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Polygon([
+				Vec2((0.57735026919  * 0.625),	0.25),
+				Vec2((-0.57735026919 * 0.625),	0.25),
+				Vec2((-0.57735026919 * 0.75),	0.375),
+				Vec2((0.57735026919  * 0.75),	0.375)
+			]),
+			
+			density: 15.0,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0004,
+			filterMaskBits: 0xf363
+		}
+	],
+	mixins: [ 'enemy_flier_platform' ]
+};
+
+prefabs.enemy_charger = {
+	name: "enemy_charger",
+	tags: ['dynamic', 'gameplay', 'enemy', 'takes_damage'],
+	zIndex: 22,
+	sprites: [
+		{
+			tex: "enemy_charger_base.png",
+			tint: 0xff0000,
+			anchor: Vec2(0.5, 0.6),
+			scale: Vec2(1, 1.25),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 10
+		},
+		{
+			tex: "enemy_symbol_arrow.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 15
+		},
+		{
+			tex: "enemy_symbol_stop.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 16,
+			visible: false
+		},
+		{
+			tex: "enemy_symbol_exclamation.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(0.5, 0.5),
+			pos: Vec2(0, 0),
+			rot: 0,
+			zIndex: 17,
+			visible: false
+		}
+	],
+	body: {
+		type: 'dynamic'
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Circle(0.48),
+			
+			density: 15.0,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0004,
+			filterMaskBits: 0xf363
+		}
+	],
+	mixins: [ 'leavestrail', 'takes_damage', 'enemy_charger' ]
+};
+
+prefabs.enemy_charger_prow = {
+	name: "enemy_charger_prow",
+	tags: ['dynamic', 'gameplay', 'subassembly'],
+	zIndex: 21,
+	sprites: [],
+	body: {
+		type: 'dynamic'
+	},
+	fixtures: [
+		{
+			name: 'body',
+			shape: planck.Polygon([
+				Vec2(-0.47,	0.5),
+				Vec2(0,			0.75),
+				Vec2(0.47,		0.5),
+				Vec2(0.475,		0.25),
+				Vec2(-0.475,	0.25)
+			]),
+			
+			density: 15.0,
+			friction: 0.5,
+			restitution: 0.25,
+			
+			filterCategoryBits: 0x0004,
+			filterMaskBits: 0xf363
+		}
+	],
+	mixins: [ 'enemy_charger_prow' ]
 };
 
 //	***
@@ -3467,6 +4394,7 @@ prefabs.map = {
 	6:	'field_kill',
 	7:	'field_acc',
 	8:	'field_dec',
+	9:	'field_block',
 	
 	//	Gameplay
 	10:	'player_spawn',
@@ -3474,7 +4402,7 @@ prefabs.map = {
 	12:	'enemy_walker',
 	13:	'enemy_flier',
 	14:	'enemy_charger',
-	15:	'enemy_walker_spawner',
+	15:	'spawner_enemy_walker',
 	16:	'door_key',
 	17:	'pull_bobble',
 	
