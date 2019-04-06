@@ -24,7 +24,7 @@ visuals.launcher_explosion = (GP, pos, radius, rot) => {
 	let triEndColour =		"883300";
 	
 	let emitter = new PIXI.particles.Emitter(
-		GP.particleStageLower,
+		GP.particleStageMid,
 		particleTex['equilateral.png'],
 		{
 			alpha: {
@@ -1319,7 +1319,7 @@ visuals.player_spawn_and_goal = function(GP, posGU, rotationOffset) {
 	let scale = utils.getSpriteScale(GP, 128, 3);
 	
 	let emitter = new PIXI.particles.Emitter(
-		GP.particleStageLower,
+		GP.particleStageUpper,
 		particleTex['equilateral.png'],
 		{
 			alpha: {

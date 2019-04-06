@@ -230,7 +230,7 @@ function loadLevel(levelData) {
 	
 	let levelStream;
 	
-	let fetchLevelProm = fetch('./levels/TestLevel.png').then(
+	let fetchLevelProm = fetch('./levels/Tutorial_01.png').then(
 		(response) => {
 			if (response.status !== 200) {
 				console.log('Issue loading level file from server. Status Code: ' + response.status);

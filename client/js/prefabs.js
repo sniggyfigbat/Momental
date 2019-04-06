@@ -411,6 +411,291 @@ prefabs.mixins['door_key'] = (superclass) => class extends superclass {
 	}
 }
 
+prefabs.mixins['symbol_display'] = (superclass) => class extends superclass {
+	translateOptions(bitA, bitB) {
+		let opts = super.translateOptions(bitA, bitB);
+		
+		opts.zIndex = ((bitA & 0x01) > 0) ? 10 : 5;
+		opts.symbolIndex = (bitB & 0xf0) >>> 4;
+		
+		let colourIndex = (bitB & 0x0f);
+		
+		switch (colourIndex) {
+			case 1:
+				// Red
+				opts.colour = 0xbf4040;
+				break;
+			case 2:
+				// Green
+				opts.colour = 0x40bf40;
+				break;
+			case 3:
+				// Blue
+				opts.colour = 0x4040bf;
+				break;
+			case 4:
+				// Yellow
+				opts.colour = 0xbfbf40;
+				break;
+			case 5:
+				// Push Blue
+				opts.colour = 0x9fdfdf;
+				break;
+			case 6:
+				// Pull Purple
+				opts.colour = 0xcc9fdf;
+				break;
+			case 7:
+				// Exit Magenta
+				opts.colour = 0xdfa1df;
+				break;
+			case 8:
+				// White
+				opts.colour = 0xffffff;
+				break;
+			case 9:
+				// Black
+				opts.colour = 0x000000;
+				break;
+			default:
+				// Grey
+				opts.colour = 0xb3b3b3;
+		}
+		
+		opts.maxHP = 20;
+		
+		opts.keyCount = bitB;
+		
+		return opts;
+	}
+	
+	setup(options) {
+		this.symbolIndex = (options.symbolIndex != null) ? options.symbolIndex : 0;
+		this.colour = (options.colour != null) ? options.colour : 0xb3b3b3;
+		
+		if (options.zIndex != null) { this.sprites.zIndex = options.zIndex; }
+		
+		let size = (this.symbolIndex < 3) ? 1 : 2,
+			sprDim = utils.getSpriteScale(this.GP, 128, size),
+			newSpr;
+		
+		switch (this.symbolIndex) {
+			case 0:
+				// Arrow
+				newSpr = new Sprite(gameplayTex['symbol_arrow.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 1:
+				// Cross
+				newSpr = new Sprite(gameplayTex['symbol_cross.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 2:
+				// Dot
+				newSpr = new Sprite(gameplayTex['symbol_dot_outer.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_dot_centre.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 3:
+				// M1
+				newSpr = new Sprite(gameplayTex['symbol_m_body.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_m1.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 4:
+				// M2
+				newSpr = new Sprite(gameplayTex['symbol_m_body.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_m2.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 5:
+				// Keyboard base
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 6:
+				// W
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_w.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 7:
+				// A
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_a.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 8:
+				// S
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_s.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 9:
+				// D
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_d.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 10:
+				// Q
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_q.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 11:
+				// E
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_e.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 12:
+				// Shift
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_shift.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(1.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			default:
+				// Error
+				console.log("ERROR: Invalid symbol index ('" + this.symbolIndex + "') was passed to symbol_display setup.");
+		}
+		
+		if (super.setup) super.setup(options);
+	}
+}
+
 /*
 prefabs.mixins['player_jumpfield'] = (superclass) => class extends superclass {
 	setup(options) {
@@ -460,13 +745,12 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		this.currentWeapon = null;
 		this.ammo = (options.startingAmmo != null) ? options.startingAmmo : 0;
 		
-		if (options.hasShotgun == true) { enableShotgun(options.shotgunStartsWithAmmo); }
-		if (options.hasLauncher == true) { enableLauncher(options.launcherStartsWithAmmo); }
-		if (options.hasTesla == true) { enableTesla(options.teslaStartsWithAmmo); }
+		if (options.hasShotgun == true) { this.enableShotgun(options.shotgunStartsWithAmmo); }
+		if (options.hasLauncher == true) { this.enableLauncher(options.launcherStartsWithAmmo); }
+		if (options.hasTesla == true) { this.enableTesla(options.teslaStartsWithAmmo); }
 		
 		// Build Jumpfields
-		this.hasJumpField = (options.hasJumpField == true);
-		if (this.hasJumpField) { this.enableJumpField(); }
+		if (options.hasJumpField == true) { this.enableJumpField(); }
 		/*this.sprites.jumpField.visible = false;
 		this.jumpFieldExtension = 0.75;*/
 		this.jumpFieldRange = 1.5;
@@ -482,8 +766,7 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		}*/
 		
 		// Build Pullfield
-		this.hasPullField = (options.hasPullField == true);
-		if (this.hasPullField) { this.enablePullField(); }
+		if (options.hasPullField == true) { this.enablePullField(); }
 		//this.sprites.pullField.visible = false;
 		//this.pullFieldExtension = 0.75;
 		this.pullFieldRange = 1.5;
@@ -4378,6 +4661,18 @@ prefabs.enemy_charger_prow = {
 	mixins: [ 'enemy_charger_prow' ]
 };
 
+prefabs.symbol_display = {
+	name: "symbol_display",
+	tags: ['static'],
+	zIndex: 45,
+	sprites: [],
+	body: {
+		type: 'static'
+	},
+	fixtures: [],
+	mixins: [ 'loading_90rot', 'symbol_display' ]
+};
+
 //	***
 //	Level creation / reading
 //	***
@@ -4405,6 +4700,9 @@ prefabs.map = {
 	15:	'spawner_enemy_walker',
 	16:	'door_key',
 	17:	'pull_bobble',
+	
+	//	what are categories anyway?
+	18:	'symbol_display',
 	
 	//	Powerups
 	20:	'player_unlock',

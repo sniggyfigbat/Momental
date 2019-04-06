@@ -86,16 +86,26 @@ function Gameplay(world, app, IH, settings) {
 	}
 	
 	this.particleStageLower = new PIXI.Container();
-	this.stage.addChild(this.particleStageLower);
 	this.particleStageLower.zIndex = 10;
+	this.stage.addChild(this.particleStageLower);
 	
 	this.particleStageMid = new PIXI.Container();
-	this.stage.addChild(this.particleStageMid);
 	this.particleStageMid.zIndex = 30;
+	this.stage.addChild(this.particleStageMid);
 	
 	this.particleStageUpper = new PIXI.Container();
-	this.stage.addChild(this.particleStageUpper);
 	this.particleStageUpper.zIndex = 50;
+	this.stage.addChild(this.particleStageUpper);
+	
+	// Slowdown visual
+	let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+	this.slowOverlay = new PIXI.Graphics;
+	this.slowOverlay.lineStyle(0, 0, 0);
+	this.slowOverlay.beginFill(0xd9e2ff, 1);
+	this.slowOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+	this.slowOverlay.visible = false;
+	this.slowOverlay.zIndex = 11;
+	this.stage.addChild(this.slowOverlay);
 	
 	// Input Handler
 	console.assert(IH != null, 'ERROR: Gameplay object created with null Input Handler!'); 
@@ -266,18 +276,25 @@ function Gameplay(world, app, IH, settings) {
 			let aEnemy = (typeA === 'enemy_walker') || (typeA === 'enemy_flier') || (typeA === 'enemy_charger');
 			let bEnemy = (typeB === 'enemy_walker') || (typeB === 'enemy_flier') || (typeB === 'enemy_charger');
 			// Check for charger prow relative speed.
-			if ((typeA === 'enemy_charger_prow') && goA._state === 3) {
-				let linVelA = goA.body.getLinearVelocity();
-				let linVelB = goB.body.getLinearVelocity();
-				let relative = linVelA.clone().sub(linVelB);
-				if (relative.lengthSquared() > (7.5 * 7.5)) { aEnemy = true; }
+			if (typeA === 'enemy_charger_prow' && bPlayer) {
+				if (goA._parent._state === 3 || goA._parent._state === 4) {
+					let linVelA = goA.body.getLinearVelocity();
+					let linVelB = goB.body.getLinearVelocity();
+					let relative = linVelA.clone().sub(linVelB);
+					if (relative.lengthSquared() > (7.5 * 7.5)) { aEnemy = true; }
+				}
+				else { goA._parent._stunContact = true; }
 			}
-			if ((typeB === 'enemy_charger_prow') && goB._state === 3) {
-				let linVelA = goA.body.getLinearVelocity();
-				let linVelB = goB.body.getLinearVelocity();
-				let relative = linVelB.clone().sub(linVelA);
-				if (relative.lengthSquared() > (7.5 * 7.5)) { bEnemy = true; }
+			if (typeB === 'enemy_charger_prow' && aPlayer) {
+				if (goB._parent._state === 3 || goB._parent._state === 4) {
+					let linVelA = goA.body.getLinearVelocity();
+					let linVelB = goB.body.getLinearVelocity();
+					let relative = linVelB.clone().sub(linVelA);
+					if (relative.lengthSquared() > (7.5 * 7.5)) { bEnemy = true; }
+				}
+				else { goB._parent._stunContact = true; }
 			}
+			
 			if ((aPlayer ? !bPlayer : bPlayer) && (aEnemy || bEnemy)) {
 				let player	= aPlayer ? goA : goB;
 				player.destroy(false);
@@ -349,6 +366,8 @@ function Gameplay(world, app, IH, settings) {
 			
 			let aProw = typeA === 'enemy_charger_prow';
 			let bProw = typeB === 'enemy_charger_prow';
+			let aPlayer = typeA === 'player';
+			let bPlayer = typeB === 'player';
 			
 			if (aEnemy || bEnemy || aProw || bProw) {
 				let worldMan = {points: [], separations: []};
@@ -365,11 +384,11 @@ function Gameplay(world, app, IH, settings) {
 						if (normPos) { goB._leftContact = true; }
 						else { goB._rightContact = true; }
 					}
-					else if (aProw) {
+					else if (aProw && !bPlayer) {
 						if (normPos) { goA._parent._rightContact = true; }
 						else { goA._parent._leftContact = true; }
 					}
-					else if (bProw) {
+					else if (bProw && !aPlayer) {
 						if (normPos) { goB._parent._leftContact = true; }
 						else { goB._parent._rightContact = true; }
 					}
@@ -442,6 +461,15 @@ Gameplay.prototype.loadLevel = function(level) {
 		}
 	}
 	
+	// Kill-borders.
+	for (let x = 0; x < 35; x++) {
+		this.makeObject('field_kill', null, Vec2(x, 0), 0);
+		this.makeObject('field_kill', null, Vec2(x, 34), 0);
+	}
+	for (let y = 1; y < 34; y++) {
+		this.makeObject('field_kill', null, Vec2(0, y), 0);
+		this.makeObject('field_kill', null, Vec2(34, y), 0);
+	}
 }
 
 /*
@@ -1050,6 +1078,15 @@ Gameplay.prototype.update = function(deltaMS) {
 	deltaMS *= this.timeFactor;
 	let deltaS = deltaMS / 1000;
 	
+	if (this.timeFactor !== 1) {
+		this.slowOverlay.visible = true;
+		this.slowOverlay.alpha = 1 - this.timeFactor;
+	}
+	else {
+		this.slowOverlay.visible = false;
+		this.slowOverlay.alpha = 0;
+	}
+	
 	this.world.step(deltaS);
 	
 	// Pre-update. I thought I'd end up using this way more than I have.
@@ -1057,6 +1094,7 @@ Gameplay.prototype.update = function(deltaMS) {
 	this.dynamicObjects.forEach((element) => {
 		element.updateFieldLogic(deltaS);
 		if (element.preupdate) { element.preupdate(deltaMS); }
+		if (element.position.lengthSquared() > 1000000) { element.destroy(false); } // Out of bounds destruction.
 	}, this);
 	
 	this.staticObjects.forEach((element) => {
