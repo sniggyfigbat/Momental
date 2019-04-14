@@ -99,8 +99,8 @@
 
 
 
-var base64 = __webpack_require__(46)
-var ieee754 = __webpack_require__(47)
+var base64 = __webpack_require__(47)
+var ieee754 = __webpack_require__(48)
 var isArray = __webpack_require__(21)
 
 exports.Buffer = Buffer
@@ -2636,7 +2636,7 @@ function isPrimitive(arg) {
 }
 exports.isPrimitive = isPrimitive;
 
-exports.isBuffer = __webpack_require__(48);
+exports.isBuffer = __webpack_require__(49);
 
 function objectToString(o) {
   return Object.prototype.toString.call(o);
@@ -3096,7 +3096,7 @@ function objectToString(o) {
 
 var Buffer = __webpack_require__(0).Buffer;
 var Transform = __webpack_require__(9).Transform;
-var binding = __webpack_require__(61);
+var binding = __webpack_require__(62);
 var util = __webpack_require__(3);
 var assert = __webpack_require__(17).ok;
 var kMaxLength = __webpack_require__(0).kMaxLength;
@@ -3776,10 +3776,10 @@ var inherits = __webpack_require__(4);
 
 inherits(Stream, EE);
 Stream.Readable = __webpack_require__(15);
-Stream.Writable = __webpack_require__(56);
-Stream.Duplex = __webpack_require__(57);
-Stream.Transform = __webpack_require__(58);
-Stream.PassThrough = __webpack_require__(59);
+Stream.Writable = __webpack_require__(57);
+Stream.Duplex = __webpack_require__(58);
+Stream.Transform = __webpack_require__(59);
+Stream.PassThrough = __webpack_require__(60);
 
 // Backwards-compat with node 0.4.x
 Stream.Stream = Stream;
@@ -4588,7 +4588,7 @@ exports.Readable = exports;
 exports.Writable = __webpack_require__(16);
 exports.Duplex = __webpack_require__(5);
 exports.Transform = __webpack_require__(26);
-exports.PassThrough = __webpack_require__(55);
+exports.PassThrough = __webpack_require__(56);
 
 
 /***/ }),
@@ -4668,7 +4668,7 @@ util.inherits = __webpack_require__(4);
 
 /*<replacement>*/
 var internalUtil = {
-  deprecate: __webpack_require__(54)
+  deprecate: __webpack_require__(55)
 };
 /*</replacement>*/
 
@@ -5283,7 +5283,7 @@ Writable.prototype._destroy = function (err, cb) {
   this.end();
   cb(err);
 };
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(1), __webpack_require__(52).setImmediate, __webpack_require__(2)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(1), __webpack_require__(53).setImmediate, __webpack_require__(2)))
 
 /***/ }),
 /* 17 */
@@ -5862,9 +5862,9 @@ module.exports = bytesToUuid;
 
 var util = __webpack_require__(3);
 var Stream = __webpack_require__(9);
-var Parser = __webpack_require__(60);
-var Packer = __webpack_require__(71);
-var PNGSync = __webpack_require__(74);
+var Parser = __webpack_require__(61);
+var Packer = __webpack_require__(72);
+var PNGSync = __webpack_require__(75);
 
 
 var PNG = exports.PNG = function(options) {
@@ -6121,7 +6121,7 @@ util.inherits = __webpack_require__(4);
 /*</replacement>*/
 
 /*<replacement>*/
-var debugUtil = __webpack_require__(49);
+var debugUtil = __webpack_require__(50);
 var debug = void 0;
 if (debugUtil && debugUtil.debuglog) {
   debug = debugUtil.debuglog('stream');
@@ -6130,7 +6130,7 @@ if (debugUtil && debugUtil.debuglog) {
 }
 /*</replacement>*/
 
-var BufferList = __webpack_require__(50);
+var BufferList = __webpack_require__(51);
 var destroyImpl = __webpack_require__(24);
 var StringDecoder;
 
@@ -9042,8 +9042,8 @@ module.exports = function(indata, imageData) {
 
 var constants = __webpack_require__(8);
 var CrcStream = __webpack_require__(34);
-var bitPacker = __webpack_require__(72);
-var filter = __webpack_require__(73);
+var bitPacker = __webpack_require__(73);
+var filter = __webpack_require__(74);
 var zlib = __webpack_require__(7);
 
 var Packer = module.exports = function(options) {
@@ -10991,12 +10991,15 @@ const PNG = __webpack_require__(43).PNG;
 
 let Gameplay;
 var GP;
+var menus;
 var utils = __webpack_require__(44);
 
 //var fs = require('fs'),
 //	PNG = require('pngjs').PNG;
 
 let type = "WebGL";
+
+var activeUpdated = null;
 
 if(!PIXI.utils.isWebGLSupported()) {
 	type = "canvas";
@@ -11020,7 +11023,7 @@ let world = planck.World({
 //	Window setup
 //	***
 
-let winInSize, app, bucket;
+let winInSize, app, bucket, settings;
 
 function setupApp() {
 	// Useful code stolen from https://andylangton.co.uk/blog/development/get-viewportwindow-size-width-and-height-javascript , many thanks.
@@ -11144,6 +11147,20 @@ function setupApp() {
 	app.renderer.plugins.interaction.cursorStyles.red		= "url('cursors/cursor_red_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
 	app.renderer.plugins.interaction.cursorStyles.green		= "url('cursors/cursor_green_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
 	app.renderer.plugins.interaction.cursorStyles.blue		= "url('cursors/cursor_blue_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	
+	settings = {
+		autoReload: true,
+		autoSlowAim: true,
+		
+		pixelOffset:		new PIXI.Point(bucket.xOffset, bucket.yOffset),
+		pixelSize:			new PIXI.Point(bucket.width, bucket.height),
+		
+		pixelScaleFactor:	bucket.pixelScaleFactor,	// 1 game unit (tile / GU) translated to PIXI units (pixels).
+		meterScaleFactor:	1,							// 1 game unit (tile / GU) translated to 1 box2D units (meters).
+		levelSize:			Vec2(34, 34),				// In GU. Note, origin is in bottom left.
+		pixelOrigin:		Vec2(0, 34),				// In GU. PIXI's origin is in the top left of the screen, this is the location of that point in gameplay space.
+		meterOrigin:		Vec2(0, 0)					// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
+	};
 }
 
 setupApp();
@@ -11151,7 +11168,9 @@ setupApp();
 loader
 	.add([ // Add assets to import below:
 		"assets/gameplay.json",
-		"assets/particles.json"
+		"assets/particles.json",
+		"assets/menu.json",
+		"assets/main_decor.png"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -11166,12 +11185,15 @@ function setup() {
 	// More Aliases
 	gameplayTex = resources["assets/gameplay.json"].textures;
 	
-	loadLevel("");
+	menus = __webpack_require__(45);
+	
+	activeUpdated = new menus.make_main(app, settings);
+	//loadLevel('Tutorial_05');
 	
 	app.ticker.add(delta => gameLoop(delta));
 }
 
-function loadLevel(levelData) {
+function loadLevel(levelName) {
 	/*let sprite1 = new Sprite(
 		gameplayTex["player_body.png"]
 	);
@@ -11191,30 +11213,19 @@ function loadLevel(levelData) {
 	sprite2.scale.set(0.25, 0.25);
 	sprite2.position.set(272, 272);*/
 	
-	Gameplay = __webpack_require__(45);
-	const IH = __webpack_require__(81);
+	Gameplay = __webpack_require__(46);
+	const IH = __webpack_require__(82);
 	
 	IH.setup(app.view);
 	
-	GP = new Gameplay(world, app, IH, {
-		autoReload: true,
-		autoSlowAim: true,
-		
-		pixelOffset:		new PIXI.Point(bucket.xOffset, bucket.yOffset),
-		
-		pixelScaleFactor:	bucket.pixelScaleFactor,	// 1 game unit (tile / GU) translated to PIXI units (pixels).
-		meterScaleFactor:	1,							// 1 game unit (tile / GU) translated to 1 box2D units (meters).
-		levelSize:			Vec2(34, 34),				// In GU. Note, origin is in bottom left.
-		pixelOrigin:		Vec2(0, 34),				// In GU. PIXI's origin is in the top left of the screen, this is the location of that point in gameplay space.
-		meterOrigin:		Vec2(0, 0)					// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
-	});
+	GP = new Gameplay(world, app, IH, settings);
 	
 	let levelStream;
 	
-	let fetchLevelProm = fetch('./levels/Tutorial_01.png').then(
+	let fetchLevelProm = fetch('./levels/' + levelName + '.png').then(
 		(response) => {
 			if (response.status !== 200) {
-				console.log('Issue loading level file from server. Status Code: ' + response.status);
+				console.log("Issue loading level file '" + levelName + "' from server. Status Code: " + response.status);
 				return;
 			}
 			
@@ -11246,6 +11257,7 @@ function loadLevel(levelData) {
 		console.log('Oh dear! You died!');
 	}
 	
+	activeUpdated = GP;
 	/*for (let i = 0; i < 34; i++) {
 		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
 	}
@@ -11310,12 +11322,12 @@ function loadLevel(levelData) {
 		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);
 		let test = GP.makeObject('test', 'test_' + i, pos, 0, {maxHP: (Math.random() * 80) + 20});
 	}*/
-	
 }
 
 function gameLoop(delta) {
 	let deltaMS = app.ticker.deltaMS;	
-	GP.update(deltaMS);
+	
+	if (activeUpdated != null) { activeUpdated.update(deltaMS); }
 }
 
 /***/ }),
@@ -27113,6 +27125,7 @@ utils.PI =	3.1415926535897932384626433832795028841971693993751058209749445923078
 utils.TAU =	6.2831853071795864769252867665590057683943387987502116419498891846156328125;
 
 utils.getSpriteScale = (GP, originalPixelSize, desiredGUSize) => (GP.settings.pixelScaleFactor * desiredGUSize / originalPixelSize);
+utils.menuSpriteScale = (pixelScaleFactor, originalPixelSize) => (originalPixelSize * (pixelScaleFactor / 64)); // Assume all menu sprites done at 64 pixel psf.
 
 utils.rotateToPoint = (mxOrM, myOrP, px, py) => {  
 	// M is dest (look-at)
@@ -27220,6 +27233,377 @@ module.exports = utils;
 
 /***/ }),
 /* 45 */
+/***/ (function(module, exports) {
+
+let Sprite = PIXI.Sprite,
+	Vec2 = planck.Vec2,
+	gameplayTex =	PIXI.Loader.shared.resources["assets/gameplay.json"].textures,
+	particleTex =	PIXI.Loader.shared.resources["assets/particles.json"].textures,
+	menuTex =		PIXI.Loader.shared.resources["assets/menu.json"].textures,
+	resources =		PIXI.Loader.shared.resources;
+
+let menus = {};
+
+let defaultTextStyle = class {
+	// I'm literally just using this as a easy way of making PIXI.TextStyle standins.
+	constructor(pixelScaleFactor, sizePreset) {
+		this.align = 'left';
+		this.fontFamily = 'Moderna';
+		
+		let sizeFac = pixelScaleFactor / 16;
+		if (sizePreset == 'small') { this.fontSize = sizeFac * 16; }
+		if (sizePreset == 'large') { this.fontSize = sizeFac * 32; }
+		else { /* sizePreset == 'medium' */ this.fontSize = sizeFac * 24; }
+		
+		// Anything else?
+	}
+}
+
+let fadeData = class {
+	constructor(sprite, fadeInTimeMS, fadeOutTimeMS) {
+		this.sprite = sprite;
+		this.active = true;
+		this._triggered = false;
+		this.counter = 0;
+		this.fadeInTimeMS = fadeInTimeMS || 500;
+		this.fadeOutTimeMS = fadeOutTimeMS || this.fadeInTimeMS;
+	}
+	
+	get triggered() { return this._triggered; }
+	
+	set triggered(newState) {
+		let flag = newState != null ? newState : true;
+		if (flag != this._triggered) {
+			this._triggered = flag;
+			
+			if (this.fadeInTimeMS != this.fadeOutTimeMS) {
+				if (flag) { this.counter = (this.counter / this.fadeOutTimeMS) * this.fadeInTimeMS; }
+				else { this.counter = (this.counter / this.fadeInTimeMS) * this.fadeOutTimeMS; }
+			}
+		}
+	}
+	
+	updateFade(deltaMS) {
+		if (this.active) {
+			if (this._triggered && this.counter < this.fadeInTimeMS) {
+				this.counter += deltaMS;
+				if (this.counter >= this.fadeInTimeMS) { this.counter = this.fadeInTimeMS; }
+				this.sprite.alpha = (this.counter / this.fadeInTimeMS);
+			}
+			else if (!this._triggered && this.counter > 0) {
+				this.counter -= deltaMS;
+				if (this.counter <= 0) { this.counter = 0; }
+				this.sprite.alpha = (this.counter / this.fadeOutTimeMS);
+			}
+		}
+	}
+}
+
+let fadeTintData = class {
+	constructor(sprite, fadeInTimeMS, fadeInColourHex, fadeOutTimeMS, fadeOutColourHex) {
+		this.sprite = sprite;
+		this.active = true;
+		this._triggered = false;
+		this.counter = 0;
+		
+		this.fadeInTimeMS = fadeInTimeMS || 500;
+		this.fadeInColourHex = fadeInColourHex || 0x000000;
+		
+		this.fadeOutTimeMS = fadeOutTimeMS || this.fadeInTimeMS;
+		this.fadeOutColourHex = fadeOutColourHex || 0xffffff;
+	}
+	
+	get triggered() { return this._triggered; }
+	
+	set triggered(newState) {
+		let flag = newState != null ? newState : true;
+		if (flag != this._triggered) {
+			this._triggered = flag;
+			
+			if (this.fadeInTimeMS != this.fadeOutTimeMS) {
+				if (flag) { this.counter = (this.counter / this.fadeOutTimeMS) * this.fadeInTimeMS; }
+				else { this.counter = (this.counter / this.fadeInTimeMS) * this.fadeOutTimeMS; }
+			}
+		}
+	}
+	
+	updateFade(deltaMS) {
+		if (this.active) {
+			if (this._triggered && this.counter < this.fadeInTimeMS) {
+				this.counter += deltaMS;
+				if (this.counter >= this.fadeInTimeMS) { this.counter = this.fadeInTimeMS; }
+				
+				let prop = (this.counter / this.fadeInTimeMS);
+				let tint = utils.linearColourInterpolation(this.fadeOutColourHex, this.fadeInColourHex, prop);
+				
+				this.sprite.tint = tint;
+			}
+			else if (!this._triggered && this.counter > 0) {
+				this.counter -= deltaMS;
+				if (this.counter <= 0) { this.counter = 0; }
+				
+				let prop = (this.counter / this.fadeOutTimeMS);
+				let tint = utils.linearColourInterpolation(this.fadeOutColourHex, this.fadeInColourHex, prop);
+				
+				this.sprite.tint = tint;
+			}
+		}
+	}
+}
+
+menus.make_main = class {
+	constructor (app, settings) {
+		this.stage = new PIXI.Container();
+		this.stage.sortableChildren = true;
+		app.stage.addChildAt(this.stage, 0);
+		this.stage.position.set(settings.pixelOffset.x, settings.pixelOffset.y);
+		
+		this.settings = settings;
+		this._behaviour = "";
+		this._behaviourTrigger = false;
+		
+		// Blackout visual
+		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+		this._darkTimer = 500;
+		this._blackIn = false;
+		this.darkOverlay = new PIXI.Graphics;
+		this.darkOverlay.lineStyle(0, 0, 0);
+		this.darkOverlay.beginFill(0x000000, 1);
+		this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.darkOverlay.visible = true;
+		this.darkOverlay.zIndex = 101;
+		this.stage.addChild(this.darkOverlay);
+		
+		// Visuals
+		this.sprites = {};
+		this.sprites.fadeables = [];
+		
+		let sprSF = (settings.pixelScaleFactor / 64),
+			newSpr; // Assume all menu sprites done at 64 pixel psf.
+		this.sprites.lightups = new PIXI.Container();
+		this.sprites.lightups.zIndex = 5;
+		this.stage.addChild(this.sprites.lightups);
+		
+		// decor
+		this.sprites.decor = new Sprite(resources['assets/main_decor.png'].texture);
+		//this.sprites.decor.tint = this.colour;
+		//this.sprites.decor.anchor.set(0.0, 0.0);
+		this.sprites.decor.scale.set(sprSF, sprSF);
+		this.sprites.decor.zIndex = 10;
+		//this.sprites.decor.position.set(sprSF * 1088, sprSF * 1088);
+		this.stage.addChild(this.sprites.decor);
+		
+		// light-up bits
+		this._lightupsDeltaS = 0;
+		
+		newSpr = new Sprite(menuTex['main_lightup1.png']);
+		//newSpr.tint = this.colour;
+		//newSpr.anchor.set(0.0, 0.0);
+		newSpr.scale.set(sprSF, sprSF);
+		newSpr.position.set(sprSF * 64, sprSF * 384);
+		newSpr.tint = 0x8181ff;
+		newSpr.alpha = 0;
+		newSpr._sinFreqMul = 1;
+		
+		this.sprites.lightups.addChild(newSpr);
+		this.sprites.lightup1 = newSpr;		
+
+		newSpr = new Sprite(menuTex['main_lightup2.png']);
+		//newSpr.tint = this.colour;
+		//newSpr.anchor.set(0.0, 0.0);
+		newSpr.scale.set(sprSF, sprSF);
+		newSpr.position.set(sprSF * 2016, sprSF * 1088);
+		newSpr.tint = 0xff8181;
+		newSpr.alpha = 0;
+		newSpr._sinFreqMul = 1.25;
+		
+		this.sprites.lightups.addChild(newSpr);
+		this.sprites.lightup1 = newSpr;
+		
+		newSpr = new Sprite(menuTex['main_lightup3.png']);
+		//newSpr.tint = this.colour;
+		//newSpr.anchor.set(0.0, 0.0);
+		newSpr.scale.set(sprSF, sprSF);
+		newSpr.position.set(sprSF * 64, sprSF * 64);
+		newSpr.tint = 0x81ff81;
+		newSpr.alpha = 0;
+		newSpr._sinFreqMul = 1.75;
+		
+		this.sprites.lightups.addChild(newSpr);
+		this.sprites.lightup1 = newSpr;
+		
+		// Title
+		this.sprites.title = new Sprite(menuTex['logo_medium.png']);
+		//this.sprites.title.tint = this.colour;
+		this.sprites.title.anchor.set(0.5, 0.5);
+		this.sprites.title.scale.set(sprSF, sprSF);
+		this.sprites.title.zIndex = 15;
+		this.sprites.title.position.set(sprSF * 1088, sprSF * 576);
+		this.stage.addChild(this.sprites.title);
+		
+		// buttons
+		let buttonHitWidth = 640 * sprSF,
+			buttonHitHeight = 128 * sprSF,
+			buttonTextStye = new defaultTextStyle(settings.pixelScaleFactor, 'large');
+		
+		// Tutorial Button
+		this.sprites.but_tut = new PIXI.Container();
+		this.sprites.but_tut.zIndex = 16;
+		this.stage.addChild(this.sprites.but_tut);
+		this.sprites.but_tut.position.set(sprSF * 1088, sprSF * 928);
+		
+		this.sprites.but_tut.interactive = true;
+		this.sprites.but_tut.hitArea = new PIXI.Rectangle(
+			-0.5 * buttonHitWidth,
+			-0.5 * buttonHitHeight,
+			buttonHitWidth,
+			buttonHitHeight
+		);
+		
+		newSpr = new Sprite(menuTex['button_dot.png']);
+		newSpr.tint = 0xffffff;
+		newSpr.anchor.set(0.5, 0.5);
+		newSpr.scale.set(sprSF, sprSF);
+		newSpr.position.set(sprSF * -256, 0);
+		
+		newSpr._fadeTintData = new fadeTintData(newSpr, 500, 0x8181ff);
+		
+		this.sprites.but_tut.addChild(newSpr);
+		this.sprites.but_tut.dot = newSpr;
+		this.sprites.fadeables.push(newSpr);
+		
+		newSpr = new PIXI.Text('tutorial', buttonTextStye);
+		newSpr.position.set(sprSF * -128, sprSF * -96);
+		
+		this.sprites.but_tut.addChild(newSpr);
+		this.sprites.but_tut.textSpr = newSpr;
+		
+		this.sprites.but_tut.mouseover = (mouseData) => { this.sprites.but_tut.dot._fadeTintData.triggered = true; }
+		this.sprites.but_tut.mouseout = (mouseData) => { this.sprites.but_tut.dot._fadeTintData.triggered = false; }
+		
+		// Play Button
+		this.sprites.but_play = new PIXI.Container();
+		this.sprites.but_play.zIndex = 17;
+		this.stage.addChild(this.sprites.but_play);
+		this.sprites.but_play.position.set(sprSF * 1088, sprSF * 1184);
+		
+		this.sprites.but_play.interactive = true;
+		this.sprites.but_play.hitArea = new PIXI.Rectangle(
+			-0.5 * buttonHitWidth,
+			-0.5 * buttonHitHeight,
+			buttonHitWidth,
+			buttonHitHeight
+		);
+		
+		newSpr = new Sprite(menuTex['button_dot.png']);
+		newSpr.tint = 0xffffff;
+		newSpr.anchor.set(0.5, 0.5);
+		newSpr.scale.set(sprSF, sprSF);
+		newSpr.position.set(sprSF * -256, 0);
+		
+		newSpr._fadeTintData = new fadeTintData(newSpr, 500, 0x81ff81);
+		
+		this.sprites.but_play.addChild(newSpr);
+		this.sprites.but_play.dot = newSpr;
+		this.sprites.fadeables.push(newSpr);
+		
+		newSpr = new PIXI.Text('play', buttonTextStye);
+		newSpr.position.set(sprSF * -128, sprSF * -96);
+		
+		this.sprites.but_play.addChild(newSpr);
+		this.sprites.but_play.textSpr = newSpr;
+		
+		this.sprites.but_play.mouseover = (mouseData) => { this.sprites.but_play.dot._fadeTintData.triggered = true; }
+		this.sprites.but_play.mouseout = (mouseData) => { this.sprites.but_play.dot._fadeTintData.triggered = false; }
+		
+		// Options Button
+		this.sprites.but_opt = new PIXI.Container();
+		this.sprites.but_opt.zIndex = 16;
+		this.stage.addChild(this.sprites.but_opt);
+		this.sprites.but_opt.position.set(sprSF * 1088, sprSF * 1632);
+		
+		this.sprites.but_opt.interactive = true;
+		this.sprites.but_opt.hitArea = new PIXI.Rectangle(
+			-0.5 * buttonHitWidth,
+			-0.5 * buttonHitHeight,
+			buttonHitWidth,
+			buttonHitHeight
+		);
+		
+		newSpr = new Sprite(menuTex['button_dot.png']);
+		newSpr.tint = 0xffffff;
+		newSpr.anchor.set(0.5, 0.5);
+		newSpr.scale.set(sprSF, sprSF);
+		newSpr.position.set(sprSF * -256, 0);
+		
+		newSpr._fadeTintData = new fadeTintData(newSpr, 500, 0xff8181);
+		
+		this.sprites.but_opt.addChild(newSpr);
+		this.sprites.but_opt.dot = newSpr;
+		this.sprites.fadeables.push(newSpr);
+		
+		newSpr = new PIXI.Text('options', buttonTextStye);
+		newSpr.position.set(sprSF * -128, sprSF * -96);
+		
+		this.sprites.but_opt.addChild(newSpr);
+		this.sprites.but_opt.textSpr = newSpr;
+		
+		this.sprites.but_opt.mouseover = (mouseData) => { this.sprites.but_opt.dot._fadeTintData.triggered = true; }
+		this.sprites.but_opt.mouseout = (mouseData) => { this.sprites.but_opt.dot._fadeTintData.triggered = false; }
+	}
+	
+	update(deltaMS) {
+		let deltaS = deltaMS * 0.001;
+		
+		if (!this._blackIn &&  this._darkTimer > 0) {
+			this._darkTimer -= deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer <= 0) {
+				this._darkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+		else if (this._blackIn &&  this._darkTimer < 500) {
+			this._darkTimer += deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer >= 500) {
+				this._darkTimer = 500;
+				// Phased out of the menu. Trigger the set behaviour.
+				this._behaviourTrigger = true;
+			}
+		}
+		
+		if (this._behaviourTrigger && this._behaviour != "") {
+			this[this._behaviour]();
+		}
+		
+		this._lightupsDeltaS += deltaS;
+		this.sprites.lightups.children.forEach((element) => {
+			// Actually uses neg cos. Not sin. Oops.
+			let temp = -Math.cos(this._lightupsDeltaS / element._sinFreqMul);
+			temp = (temp + 1) * 0.5;
+			element.alpha = temp;
+		});
+		if (this._lightupsDeltaS > 20000) { this._lightupsDeltaS = 0; } // Always catch edge cases, my dude.
+		
+		// Button fading
+		this.sprites.fadeables.forEach((element) => {
+			if (element._fadeData) { element._fadeData.updateFade(deltaMS); }
+			if (element._fadeTintData) { element._fadeTintData.updateFade(deltaMS); }
+		});
+	}
+}
+
+module.exports = menus;
+
+/***/ }),
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //	***
@@ -27232,8 +27616,8 @@ const uuid = __webpack_require__(13);
 //const fs = require('fs');
 const PNG = __webpack_require__(20).PNG;
 
-const mix = __webpack_require__(79);
-const prefabs = __webpack_require__(80);
+const mix = __webpack_require__(80);
+const prefabs = __webpack_require__(81);
 const visuals = __webpack_require__(39);
 
 'use strict'
@@ -27266,7 +27650,7 @@ function Gameplay(world, app, IH, settings) {
 	this.trigger_player_death = (playerPosGU) => {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
-			this._afterEndTime = 1000;
+			this._afterEndTime = 1500;
 			this._endVictory = false;
 			
 			visuals.player_death(this, playerPosGU.clone());
@@ -27275,7 +27659,7 @@ function Gameplay(world, app, IH, settings) {
 	this.trigger_player_reached_goal = (goal) => {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
-			this._afterEndTime = 3000;
+			this._afterEndTime = 3500;
 			this._endVictory = true;
 			
 			this.getObjectsOfType("player")[0].destroy(false);
@@ -27330,6 +27714,16 @@ function Gameplay(world, app, IH, settings) {
 	this.slowOverlay.visible = false;
 	this.slowOverlay.zIndex = 11;
 	this.stage.addChild(this.slowOverlay);
+	
+	// Blackout visual
+	this._startDarkTimer = 500;
+	this.darkOverlay = new PIXI.Graphics;
+	this.darkOverlay.lineStyle(0, 0, 0);
+	this.darkOverlay.beginFill(0x000000, 1);
+	this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+	this.darkOverlay.visible = true;
+	this.darkOverlay.zIndex = 101;
+	this.stage.addChild(this.darkOverlay);
 	
 	// Input Handler
 	console.assert(IH != null, 'ERROR: Gameplay object created with null Input Handler!'); 
@@ -28281,13 +28675,27 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 Gameplay.prototype.update = function(deltaMS) {
 	if (this._gameEnded != false) {
 		this._afterEndTime -= deltaMS;
+		
+		if (this._afterEndTime < 500) {
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = 1 - (this._afterEndTime / 500);
+		}
+		
 		if (this._afterEndTime < 0) {
 			if (this._endVictory) { this.trigger_end_victory(); }
 			else { this.trigger_end_defeat(); }
 		}
 	}
-	
-	
+	else {
+		if (this._startDarkTimer > 0) {
+			this._startDarkTimer -= deltaMS;
+			this.darkOverlay.alpha = this._startDarkTimer / 500;
+			if (this._startDarkTimer <= 0) {
+				this._startDarkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+	}
 	
 	// Update cursor stage position
 	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
@@ -28298,6 +28706,12 @@ Gameplay.prototype.update = function(deltaMS) {
 	this.cursorStage.visible = mouseInFrame;
 	
 	let realDeltaMS = deltaMS;
+	
+	let player = this.getObjectsOfType('player', false)[0];
+	if (player == null && this.timeFactor < 1) {
+		this.timeFactor += deltaMS / 1000;
+		this.timeFactor = (this.timeFactor < 1) ? this.timeFactor : 1;
+	}
 	
 	deltaMS *= this.timeFactor;
 	let deltaS = deltaMS / 1000;
@@ -28423,7 +28837,7 @@ module.exports = Gameplay;
 
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28581,7 +28995,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -28671,7 +29085,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ (function(module, exports) {
 
 module.exports = function isBuffer(arg) {
@@ -28682,13 +29096,13 @@ module.exports = function isBuffer(arg) {
 }
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(module, exports) {
 
 /* (ignored) */
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28697,7 +29111,7 @@ module.exports = function isBuffer(arg) {
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Buffer = __webpack_require__(11).Buffer;
-var util = __webpack_require__(51);
+var util = __webpack_require__(52);
 
 function copyBuffer(src, target, offset) {
   src.copy(target, offset);
@@ -28773,13 +29187,13 @@ if (util && util.inspect && util.inspect.custom) {
 }
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(module, exports) {
 
 /* (ignored) */
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var scope = (typeof global !== "undefined" && global) ||
@@ -28835,7 +29249,7 @@ exports._unrefActive = exports.active = function(item) {
 };
 
 // setimmediate attaches itself to the global object
-__webpack_require__(53);
+__webpack_require__(54);
 // On some exotic environments, it's not clear which object `setimmediate` was
 // able to install onto.  Search each possibility in the same order as the
 // `setimmediate` library.
@@ -28849,7 +29263,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(2)))
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -29042,7 +29456,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(2), __webpack_require__(1)))
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {
@@ -29116,7 +29530,7 @@ function config (name) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(2)))
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29169,35 +29583,35 @@ PassThrough.prototype._transform = function (chunk, encoding, cb) {
 };
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(16);
 
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(5);
 
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(15).Transform
 
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(15).PassThrough
 
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29206,7 +29620,7 @@ module.exports = __webpack_require__(15).PassThrough
 var util = __webpack_require__(3);
 var zlib = __webpack_require__(7);
 var ChunkStream = __webpack_require__(29);
-var FilterAsync = __webpack_require__(70);
+var FilterAsync = __webpack_require__(71);
 var Parser = __webpack_require__(33);
 var bitmapper = __webpack_require__(35);
 var formatNormaliser = __webpack_require__(36);
@@ -29368,7 +29782,7 @@ ParserAsync.prototype._complete = function(filteredData) {
 
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29377,10 +29791,10 @@ ParserAsync.prototype._complete = function(filteredData) {
 
 var assert = __webpack_require__(17);
 
-var Zstream = __webpack_require__(62);
-var zlib_deflate = __webpack_require__(63);
-var zlib_inflate = __webpack_require__(66);
-var constants = __webpack_require__(69);
+var Zstream = __webpack_require__(63);
+var zlib_deflate = __webpack_require__(64);
+var zlib_inflate = __webpack_require__(67);
+var constants = __webpack_require__(70);
 
 for (var key in constants) {
   exports[key] = constants[key];
@@ -29784,7 +30198,7 @@ exports.Zlib = Zlib;
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer, __webpack_require__(1)))
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29838,7 +30252,7 @@ module.exports = ZStream;
 
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29864,10 +30278,10 @@ module.exports = ZStream;
 // 3. This notice may not be removed or altered from any source distribution.
 
 var utils   = __webpack_require__(12);
-var trees   = __webpack_require__(64);
+var trees   = __webpack_require__(65);
 var adler32 = __webpack_require__(27);
 var crc32   = __webpack_require__(28);
-var msg     = __webpack_require__(65);
+var msg     = __webpack_require__(66);
 
 /* Public constants ==========================================================*/
 /* ===========================================================================*/
@@ -31719,7 +32133,7 @@ exports.deflateTune = deflateTune;
 
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32948,7 +33362,7 @@ exports._tr_align = _tr_align;
 
 
 /***/ }),
-/* 65 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32987,7 +33401,7 @@ module.exports = {
 
 
 /***/ }),
-/* 66 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -33015,8 +33429,8 @@ module.exports = {
 var utils         = __webpack_require__(12);
 var adler32       = __webpack_require__(27);
 var crc32         = __webpack_require__(28);
-var inflate_fast  = __webpack_require__(67);
-var inflate_table = __webpack_require__(68);
+var inflate_fast  = __webpack_require__(68);
+var inflate_table = __webpack_require__(69);
 
 var CODES = 0;
 var LENS = 1;
@@ -34550,7 +34964,7 @@ exports.inflateUndermine = inflateUndermine;
 
 
 /***/ }),
-/* 67 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34902,7 +35316,7 @@ module.exports = function inflate_fast(strm, start) {
 
 
 /***/ }),
-/* 68 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35252,7 +35666,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
 
 
 /***/ }),
-/* 69 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35327,7 +35741,7 @@ module.exports = {
 
 
 /***/ }),
-/* 70 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35360,7 +35774,7 @@ util.inherits(FilterAsync, ChunkStream);
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 71 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35413,7 +35827,7 @@ PackerAsync.prototype.pack = function(data, width, height, gamma) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 72 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35564,7 +35978,7 @@ module.exports = function(dataIn, width, height, options) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 73 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35762,15 +36176,15 @@ module.exports = function(pxData, width, height, options, bpp) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 74 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 
-var parse = __webpack_require__(75);
-var pack = __webpack_require__(78);
+var parse = __webpack_require__(76);
+var pack = __webpack_require__(79);
 
 
 exports.read = function(buffer, options) {
@@ -35785,7 +36199,7 @@ exports.write = function(png, options) {
 
 
 /***/ }),
-/* 75 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35793,12 +36207,12 @@ exports.write = function(png, options) {
 
 var hasSyncZlib = true;
 var zlib = __webpack_require__(7);
-var inflateSync = __webpack_require__(76);
+var inflateSync = __webpack_require__(77);
 if (!zlib.deflateSync) {
   hasSyncZlib = false;
 }
 var SyncReader = __webpack_require__(38);
-var FilterSync = __webpack_require__(77);
+var FilterSync = __webpack_require__(78);
 var Parser = __webpack_require__(33);
 var bitmapper = __webpack_require__(35);
 var formatNormaliser = __webpack_require__(36);
@@ -35898,7 +36312,7 @@ module.exports = function(buffer, options) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 76 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36067,7 +36481,7 @@ exports.inflateSync = inflateSync;
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(1), __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 77 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36098,7 +36512,7 @@ exports.process = function(inBuffer, bitmapInfo) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 78 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36154,7 +36568,7 @@ module.exports = function(metaData, opt) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 79 */
+/* 80 */
 /***/ (function(module, exports) {
 
 //	***
@@ -36182,7 +36596,7 @@ class MixinBuilder {
 module.exports = mix;
 
 /***/ }),
-/* 80 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //	***
@@ -36260,17 +36674,77 @@ prefabs.mixins['takes_damage'] = (superclass) => class extends superclass {
 		
 		this._deathTrigger = false;
 		
+		this.sprites.healthbar = new PIXI.Graphics();
+		this.sprites.healthbar.zIndex = 100;
+		this.sprites.healthbar.visible = false;
+		this.sprites.addChild(this.sprites.healthbar);
+		
+		this._healthbarConsts = {};
+		this._healthbarConsts.width = this.GP.relGU2P(1.0);
+		this._healthbarConsts.height = this.GP.relGU2P(0.1875);
+		this._healthbarConsts.topLeft = new PIXI.Point(this.GP.relGU2P(-0.5), this.GP.relGU2P(0.25));
+		this._healthbarConsts.oneHPWidth = this.maxHP > 0 ? this.GP.relGU2P(1.0 / this.maxHP) : 1.0;		
+		
+		this._healthbarTimeout = 0;
+		this._healthbarFadeout = 0;
+		
 		if (super.setup) super.setup(options);
+	}
+	
+	setMaxHP(newMaxHP) {
+		this.maxHP = newMaxHP;
+		this._healthbarConsts.oneHPWidth = this.maxHP > 0 ? this.GP.relGU2P(1.0 / this.maxHP) : 1.0;
+		this.redrawHealthbar();
 	}
 	
 	damage(lostHP) {
 		this._timeSinceLastDamage = 0;
 		if (this.maxHP > 0) {
 			this.HP -= lostHP;
-			if (this.HP < 0) {
+			if (this.HP <= 0) {
 				this.HP = 0;
 				this._deathTrigger = true;
 			}
+			this.redrawHealthbar();
+		}
+	}
+	
+	redrawHealthbar() {
+		if (this.maxHP > 0) {
+			this._healthbarTimeout = 1;
+			
+			this.sprites.healthbar.visible = true;
+			this.sprites.healthbar.alpha = 1.0;
+			
+			this.sprites.healthbar.clear();
+			this.sprites.healthbar.lineStyle(0, 0, 0);
+			
+			let startX = this._healthbarConsts.topLeft.x;
+			let width = this._healthbarConsts.width;
+			
+			if (this.HP < this.maxHP) {
+				let empty = this.maxHP - this.HP,
+					subWidth = empty * this._healthbarConsts.oneHPWidth;
+					
+				this.sprites.healthbar.beginFill(0xff6600, 1);
+				this.sprites.healthbar.drawRect(
+					startX,
+					this._healthbarConsts.topLeft.y,
+					subWidth,
+					this._healthbarConsts.height
+				);
+				
+				startX += subWidth;
+				width -= subWidth;
+			}
+			
+			this.sprites.healthbar.beginFill(0xb3b3b3, 1);
+			this.sprites.healthbar.drawRect(
+				startX,
+				this._healthbarConsts.topLeft.y,
+				width,
+				this._healthbarConsts.height
+			);
 		}
 	}
 	
@@ -36290,8 +36764,30 @@ prefabs.mixins['takes_damage'] = (superclass) => class extends superclass {
 			}
 			
 			if (this._timeSinceLastDamage == this._delayBeforeRegen && this.HP < this.maxHP) {
-				this.HP += 20 * deltaS; // That's right! It regens 20HP a second! Yikes!
+				this.HP += 10 * deltaS; // That's right! It regens 10HP a second! Yikes!
 				if (this.HP > this.maxHP) { this.HP = this.maxHP; }
+				this.redrawHealthbar();
+			}
+		}
+		
+		this.sprites.healthbar.rotation = this.rotation;
+		
+		if (this.sprites.healthbar.visible == true) {
+			if ( this._healthbarTimeout > 0 ) {
+				this._healthbarTimeout -= deltaS;
+				if (this._healthbarTimeout <= 0) {
+					this._healthbarTimeout = 0;
+					this._healthbarFadeout = 1;
+				}
+			}
+			
+			if ( this._healthbarFadeout > 0 ) {
+				this._healthbarFadeout -= deltaS;
+				if (this._healthbarFadeout <= 0) {
+					this._healthbarFadeout = 0;
+					this.sprites.healthbar.visible = false;
+				}
+				else { this.sprites.healthbar.alpha = this._healthbarFadeout; }
 			}
 		}
 		
@@ -36644,6 +37140,10 @@ prefabs.mixins['symbol_display'] = (superclass) => class extends superclass {
 				// Black
 				opts.colour = 0x000000;
 				break;
+			case 10:
+				// Orange
+				opts.colour = 0xff6600;
+				break;
 			default:
 				// Grey
 				opts.colour = 0xb3b3b3;
@@ -36869,6 +37369,32 @@ prefabs.mixins['symbol_display'] = (superclass) => class extends superclass {
 				newSpr = new Sprite(gameplayTex['symbol_shift.png']);
 				newSpr.tint = this.colour;
 				newSpr.anchor.set(1.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 13:
+				// Brake
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_a.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_d.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
 				newSpr.scale.set(sprDim, sprDim);
 				newSpr.zIndex = 1;
 				
@@ -37592,15 +38118,29 @@ prefabs.mixins['weapon'] = (superclass) => class extends superclass {
 		if (this.active &&
 			!this.isSwitching &&
 			!this.isReloading &&
-			this.clip != this.clipMax
-			&& this.player.ammo > 0) {
+			this.clip != this.clipMax &&
+			this.player.ammo > 0) {
 			
-			let remainder = this.clip / this.clipMax;
-			let toTake = 1 - remainder;
-			if (this.player.ammo >= toTake) {
-				console.log(this.name + ': RELOADING.');
-				this.player.ammo -= toTake;
-				this.clip = this.clipMax;
+			let remainder = this.clip / this.clipMax,
+				toTake = 1 - remainder,
+				floatPointHack = false;
+			
+			let reloadAmount = 0;
+			if (this.player.ammo >= toTake) { reloadAmount = toTake * this.clipMax; } 
+			else if (this.player.ammo > 0) {
+				let t1 = this.player.ammo * this.clipMax,
+					available = Math.floor(t1);
+				if (t1 - available > 0.975) { available = Math.ceil(t1); floatPointHack = true; }
+				
+				if (available > 0) {
+					reloadAmount = available;
+					toTake = available / this.clipMax;
+				}
+			}
+			
+			if (reloadAmount > 0) {
+				this.player.ammo = floatPointHack ? 0 : this.player.ammo - toTake;
+				this.clip += reloadAmount;
 				
 				if (this.reloadTime > 0) {
 					this.timer = (this.timer < this.reloadTime) ? this.reloadTime : this.timer;
@@ -37682,13 +38222,32 @@ prefabs.mixins['weapon'] = (superclass) => class extends superclass {
 		let pointSep = utils.TAU / 6,
 			offset = this.GP.relGU2P(0.875),
 			radius = this.GP.relGU2P(0.125);
+			
+		let i = 1,
+			angle = -2 * pointSep;
 		
-		for (let i = 0; i < this.player.ammo; i++) {
+		for (; i <= this.player.ammo; i++) {
+			let centre = Vec2(Math.cos(angle) * offset, Math.sin(angle) * offset);
+			ammoSpr.drawCircle(centre.x, centre.y, radius);
+			
+			angle -= pointSep;
+		}
+		
+		if (!Number.isInteger(this.player.ammo)) {
+			// Draw the last clip as a partial dot, to represent a partial clip.
+			let centre = Vec2(Math.cos(angle) * offset, Math.sin(angle) * offset),
+				prop = this.player.ammo - Math.floor(this.player.ammo),
+				startAngle = (utils.PI * -0.5) - (utils.TAU * prop); 
+			
+			ammoSpr.arc(centre.x, centre.y, radius, startAngle, utils.PI * -0.5).lineTo(centre.x, centre.y);
+		}
+		
+		/*for (let i = 0; i < this.player.ammo; i++) {
 			let angle = -(i + 2) * pointSep;
 			let centre = Vec2(Math.cos(angle) * offset, Math.sin(angle) * offset);
 			
 			ammoSpr.drawCircle(centre.x, centre.y, radius);
-		}
+		}*/
 		
 		cursorStage.stateData.tint = this.sprites.gun.tint
 		cursorStage.children.forEach((element) => { element.tint = this.sprites.gun.tint; });
@@ -38746,6 +39305,11 @@ prefabs.mixins['spawner_enemy_walker'] = (superclass) => class extends superclas
 		this._totalTimerSlices = 16;
 		this._currentTimerSlices = 0;
 		
+		this.sprites.counter = new PIXI.Graphics();
+		this.sprites.counter.zIndex = 16;
+		this.sprites.counter.tint = 0x000000;
+		this.sprites.addChild(this.sprites.counter);
+		
 		if (super.setup) super.setup(options);
 	}
 	
@@ -38789,6 +39353,7 @@ prefabs.mixins['spawner_enemy_walker'] = (superclass) => class extends superclas
 					startGoingRight: direction
 				});
 				this.spawns.push(newEnemy);
+				this.redrawCounter();
 			}
 		}
 	}
@@ -38825,13 +39390,31 @@ prefabs.mixins['spawner_enemy_walker'] = (superclass) => class extends superclas
 		}
 	}
 	
-	removeFromSpawnList(enemy) {
-		let index = this.spawns.findIndex((element) => (element === enemy));
-		if (index != null && index !== -1) { this.spawns.splice(index, 1); }
+	redrawCounter() {
+		let seg = utils.TAU / this.preset.maxCount,
+			halfSeg = seg * 0.5,
+			angle = (this.rotation - utils.PI / 2) + halfSeg;
+			
+		let posRad = this.GP.relGU2P(0.75 * 0.5),
+			bobbleRad = this.GP.relGU2P(0.125 * 0.5);
+			
+		this.sprites.counter.clear();
+		this.sprites.counter.lineStyle(0, 0, 0);
+		this.sprites.counter.beginFill(0xffffff, 1);
+		
+		for (let i = 0; i < this.spawns.length; i++) {
+			let centre = new PIXI.Point(Math.cos(angle) * posRad, Math.sin(angle) * posRad);
+			this.sprites.counter.drawCircle(centre.x, centre.y, bobbleRad);
+			angle += seg;
+		}
 	}
 	
-	destructor(options) {
-		if (super.destructor) super.destructor(options);
+	removeFromSpawnList(enemy) {
+		let index = this.spawns.findIndex((element) => (element === enemy));
+		if (index != null && index !== -1) {
+			this.spawns.splice(index, 1);
+			this.redrawCounter();
+		}
 	}
 }
 
@@ -39257,7 +39840,7 @@ prefabs.mixins['enemy_charger'] = (superclass) => class extends superclass {
 			localAnchorB: Vec2(0.0, 0.0)
 		}, this.body, this.prow.body));
 		
-		// Setup ground sensor.
+		// Setup ground sensors.
 		this.groundSensor = this.GP.makeObject('enemy_sensor', this.name + '_sensor', this.position.clone().sub(Vec2(0.0, 0.5)), 0);
 		this.groundSensor.body.setFixedRotation(true);
 		let joint2 = this.GP.world.createJoint(planck.RevoluteJoint({
@@ -39419,15 +40002,22 @@ prefabs.mixins['enemy_charger'] = (superclass) => class extends superclass {
 			let prowAng = this.prow.body.getAngle(),
 				prowAngVel = this.prow.body.getAngularVelocity(),
 				desAng = 0;
+				
+			let canTurnCW	= (this.prow.sensors.cw.body.getContactList()	== null),
+				canTurnACW	= (this.prow.sensors.acw.body.getContactList()	== null);
 			
-			if (this._desProwLock === 0) { desAng = (utils.PI * 0.5) - 0.05; }
-			else if (this._desProwLock === 1) { desAng = -(utils.PI * 0.5) + 0.05; }
+			if (this._desProwLock === 0) { desAng = (utils.PI * 0.5); }
+			else if (this._desProwLock === 1) { desAng = -(utils.PI * 0.5); }
 			else if (this._desProwLock === 2) { desAng = 0; }
+			
+			let squeezeLatch = false; // Is this a good or helpful variable name? No. Does it make me happy? Yes.
+			if (prowAng < 0 && !canTurnCW) { desAng = -(utils.PI * 0.5); squeezeLatch = true }
+			if (prowAng > 0 && !canTurnACW) { desAng = (utils.PI * 0.5); squeezeLatch = true }
 			
 			let relAng = utils.bearingDelta(prowAng, desAng);
 				
-			if (Math.abs(relAng) < (utils.PI / 180) && Math.abs(prowAngVel) < 0.05) {
-				// Basically upright, basically stable.
+			if (Math.abs(relAng) < (utils.PI / 180) && Math.abs(prowAngVel) < 0.05 && !squeezeLatch) {
+				// Basically on-target, basically stable.
 				this.prow.body.setTransform(this.prow.body.getPosition(), desAng);
 				this.prow.body.setFixedRotation(true);
 				this._prowLock = this._desProwLock;
@@ -39481,19 +40071,41 @@ prefabs.mixins['enemy_charger_prow'] = (superclass) => class extends superclass 
 		this._parent = options.parentCharger;
 		this.body.setFixedRotation(true);
 		
+		// Sensors
+		this.sensors = {};
+		
+		this.sensors.cw = this.GP.makeObject('enemy_sensor', this.name + '_sensor_cw', this.position.clone().add(Vec2(-0.3125, 0.375)), 0);
+		let joint1 = this.GP.world.createJoint(planck.WeldJoint({
+			frequencyHz : 0.0,
+			dampingRatio : 0.0,
+			localAnchorA: Vec2(-0.3125, 0.375),
+			localAnchorB: Vec2(0, 0),
+			referenceAngle: 0
+		}, this.body, this.sensors.cw.body));
+		
+		this.sensors.acw = this.GP.makeObject('enemy_sensor', this.name + '_sensor_acw', this.position.clone().add(Vec2(0.3125, 0.375)), 0);
+		let joint2 = this.GP.world.createJoint(planck.WeldJoint({
+			frequencyHz : 0.0,
+			dampingRatio : 0.0,
+			localAnchorA: Vec2(0.3125, 0.375),
+			localAnchorB: Vec2(0, 0),
+			referenceAngle: 0
+		}, this.body, this.sensors.acw.body));
+		
 		if (super.setup) super.setup(options);
 	}
 	
-	updateContact() {
-		for (let c = this.body.getContactList(); c != null; c = c.next) {
-			let otherIsPlayer = (c.other.gameobject != null) ? (c.other.gameobject.type === 'player') : false;
-			if (otherIsPlayer) { this._parent._stunContact = true; }
-		}
+	update(deltaMS) {
+		this.sensors.cw.update(deltaMS);
+		this.sensors.acw.update(deltaMS);
+		if (super.update) super.update(deltaMS);
 	}
 	
-	//damage(lostHP) {
-		//this._parent.damage(lostHP);
-	//}
+	destructor(options) {
+		this.sensors.cw.destroy(true);
+		this.sensors.acw.destroy(true);
+		if (super.destructor) super.destructor(options);
+	}
 }
 
 //	_______________________________________________________
@@ -39668,7 +40280,7 @@ prefabs.door_wall = {
 			name: 'Block',
 			shape: planck.Box(0.5, 0.5),
 			
-			density: 5.0,
+			density: 20.0,
 			friction: 0.75,
 			restitution: 0.25,
 			
@@ -40762,9 +41374,9 @@ prefabs.enemy_charger = {
 	sprites: [
 		{
 			tex: "enemy_charger_base.png",
-			tint: 0xff0000,
-			anchor: Vec2(0.5, 0.6),
-			scale: Vec2(1, 1.25),
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.66666),
+			scale: Vec2(1, 1.5),
 			pos: Vec2(0, 0),
 			rot: 0,
 			zIndex: 10
@@ -40830,11 +41442,11 @@ prefabs.enemy_charger_prow = {
 		{
 			name: 'body',
 			shape: planck.Polygon([
-				Vec2(-0.47,	0.5),
-				Vec2(0,			0.75),
-				Vec2(0.47,		0.5),
-				Vec2(0.475,		0.25),
-				Vec2(-0.475,	0.25)
+				Vec2(-0.46,		0.5825),
+				Vec2(0,			0.8125),
+				Vec2(0.46,		0.5825),
+				Vec2(0.46,		0.0),
+				Vec2(-0.46,		0.0)
 			]),
 			
 			density: 15.0,
@@ -40900,14 +41512,14 @@ prefabs.map = {
 module.exports = prefabs;
 
 /***/ }),
-/* 81 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //	***
 //	inputhandler.js start
 //	***
 
-const makeKey = __webpack_require__(82);
+const makeKey = __webpack_require__(83);
 
 let IH = {};
 
@@ -40976,7 +41588,7 @@ IH.update = (deltaMS) => {
 module.exports = IH;
 
 /***/ }),
-/* 82 */
+/* 83 */
 /***/ (function(module, exports) {
 
 //	***

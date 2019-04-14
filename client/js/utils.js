@@ -8,6 +8,7 @@ utils.PI =	3.1415926535897932384626433832795028841971693993751058209749445923078
 utils.TAU =	6.2831853071795864769252867665590057683943387987502116419498891846156328125;
 
 utils.getSpriteScale = (GP, originalPixelSize, desiredGUSize) => (GP.settings.pixelScaleFactor * desiredGUSize / originalPixelSize);
+utils.menuSpriteScale = (pixelScaleFactor, originalPixelSize) => (originalPixelSize * (pixelScaleFactor / 64)); // Assume all menu sprites done at 64 pixel psf.
 
 utils.rotateToPoint = (mxOrM, myOrP, px, py) => {  
 	// M is dest (look-at)

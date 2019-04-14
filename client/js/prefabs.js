@@ -73,17 +73,77 @@ prefabs.mixins['takes_damage'] = (superclass) => class extends superclass {
 		
 		this._deathTrigger = false;
 		
+		this.sprites.healthbar = new PIXI.Graphics();
+		this.sprites.healthbar.zIndex = 100;
+		this.sprites.healthbar.visible = false;
+		this.sprites.addChild(this.sprites.healthbar);
+		
+		this._healthbarConsts = {};
+		this._healthbarConsts.width = this.GP.relGU2P(1.0);
+		this._healthbarConsts.height = this.GP.relGU2P(0.1875);
+		this._healthbarConsts.topLeft = new PIXI.Point(this.GP.relGU2P(-0.5), this.GP.relGU2P(0.25));
+		this._healthbarConsts.oneHPWidth = this.maxHP > 0 ? this.GP.relGU2P(1.0 / this.maxHP) : 1.0;		
+		
+		this._healthbarTimeout = 0;
+		this._healthbarFadeout = 0;
+		
 		if (super.setup) super.setup(options);
+	}
+	
+	setMaxHP(newMaxHP) {
+		this.maxHP = newMaxHP;
+		this._healthbarConsts.oneHPWidth = this.maxHP > 0 ? this.GP.relGU2P(1.0 / this.maxHP) : 1.0;
+		this.redrawHealthbar();
 	}
 	
 	damage(lostHP) {
 		this._timeSinceLastDamage = 0;
 		if (this.maxHP > 0) {
 			this.HP -= lostHP;
-			if (this.HP < 0) {
+			if (this.HP <= 0) {
 				this.HP = 0;
 				this._deathTrigger = true;
 			}
+			this.redrawHealthbar();
+		}
+	}
+	
+	redrawHealthbar() {
+		if (this.maxHP > 0) {
+			this._healthbarTimeout = 1;
+			
+			this.sprites.healthbar.visible = true;
+			this.sprites.healthbar.alpha = 1.0;
+			
+			this.sprites.healthbar.clear();
+			this.sprites.healthbar.lineStyle(0, 0, 0);
+			
+			let startX = this._healthbarConsts.topLeft.x;
+			let width = this._healthbarConsts.width;
+			
+			if (this.HP < this.maxHP) {
+				let empty = this.maxHP - this.HP,
+					subWidth = empty * this._healthbarConsts.oneHPWidth;
+					
+				this.sprites.healthbar.beginFill(0xff6600, 1);
+				this.sprites.healthbar.drawRect(
+					startX,
+					this._healthbarConsts.topLeft.y,
+					subWidth,
+					this._healthbarConsts.height
+				);
+				
+				startX += subWidth;
+				width -= subWidth;
+			}
+			
+			this.sprites.healthbar.beginFill(0xb3b3b3, 1);
+			this.sprites.healthbar.drawRect(
+				startX,
+				this._healthbarConsts.topLeft.y,
+				width,
+				this._healthbarConsts.height
+			);
 		}
 	}
 	
@@ -103,8 +163,30 @@ prefabs.mixins['takes_damage'] = (superclass) => class extends superclass {
 			}
 			
 			if (this._timeSinceLastDamage == this._delayBeforeRegen && this.HP < this.maxHP) {
-				this.HP += 20 * deltaS; // That's right! It regens 20HP a second! Yikes!
+				this.HP += 10 * deltaS; // That's right! It regens 10HP a second! Yikes!
 				if (this.HP > this.maxHP) { this.HP = this.maxHP; }
+				this.redrawHealthbar();
+			}
+		}
+		
+		this.sprites.healthbar.rotation = this.rotation;
+		
+		if (this.sprites.healthbar.visible == true) {
+			if ( this._healthbarTimeout > 0 ) {
+				this._healthbarTimeout -= deltaS;
+				if (this._healthbarTimeout <= 0) {
+					this._healthbarTimeout = 0;
+					this._healthbarFadeout = 1;
+				}
+			}
+			
+			if ( this._healthbarFadeout > 0 ) {
+				this._healthbarFadeout -= deltaS;
+				if (this._healthbarFadeout <= 0) {
+					this._healthbarFadeout = 0;
+					this.sprites.healthbar.visible = false;
+				}
+				else { this.sprites.healthbar.alpha = this._healthbarFadeout; }
 			}
 		}
 		
@@ -457,6 +539,10 @@ prefabs.mixins['symbol_display'] = (superclass) => class extends superclass {
 				// Black
 				opts.colour = 0x000000;
 				break;
+			case 10:
+				// Orange
+				opts.colour = 0xff6600;
+				break;
 			default:
 				// Grey
 				opts.colour = 0xb3b3b3;
@@ -682,6 +768,32 @@ prefabs.mixins['symbol_display'] = (superclass) => class extends superclass {
 				newSpr = new Sprite(gameplayTex['symbol_shift.png']);
 				newSpr.tint = this.colour;
 				newSpr.anchor.set(1.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				break;
+			case 13:
+				// Brake
+				newSpr = new Sprite(gameplayTex['symbol_wasd.png']);
+				newSpr.tint = '0xffffff';
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 0;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_a.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
+				newSpr.scale.set(sprDim, sprDim);
+				newSpr.zIndex = 1;
+				
+				this.sprites.addChild(newSpr);
+				
+				newSpr = new Sprite(gameplayTex['symbol_d.png']);
+				newSpr.tint = this.colour;
+				newSpr.anchor.set(0.5, 0.5);
 				newSpr.scale.set(sprDim, sprDim);
 				newSpr.zIndex = 1;
 				
@@ -1405,15 +1517,29 @@ prefabs.mixins['weapon'] = (superclass) => class extends superclass {
 		if (this.active &&
 			!this.isSwitching &&
 			!this.isReloading &&
-			this.clip != this.clipMax
-			&& this.player.ammo > 0) {
+			this.clip != this.clipMax &&
+			this.player.ammo > 0) {
 			
-			let remainder = this.clip / this.clipMax;
-			let toTake = 1 - remainder;
-			if (this.player.ammo >= toTake) {
-				console.log(this.name + ': RELOADING.');
-				this.player.ammo -= toTake;
-				this.clip = this.clipMax;
+			let remainder = this.clip / this.clipMax,
+				toTake = 1 - remainder,
+				floatPointHack = false;
+			
+			let reloadAmount = 0;
+			if (this.player.ammo >= toTake) { reloadAmount = toTake * this.clipMax; } 
+			else if (this.player.ammo > 0) {
+				let t1 = this.player.ammo * this.clipMax,
+					available = Math.floor(t1);
+				if (t1 - available > 0.975) { available = Math.ceil(t1); floatPointHack = true; }
+				
+				if (available > 0) {
+					reloadAmount = available;
+					toTake = available / this.clipMax;
+				}
+			}
+			
+			if (reloadAmount > 0) {
+				this.player.ammo = floatPointHack ? 0 : this.player.ammo - toTake;
+				this.clip += reloadAmount;
 				
 				if (this.reloadTime > 0) {
 					this.timer = (this.timer < this.reloadTime) ? this.reloadTime : this.timer;
@@ -1495,13 +1621,32 @@ prefabs.mixins['weapon'] = (superclass) => class extends superclass {
 		let pointSep = utils.TAU / 6,
 			offset = this.GP.relGU2P(0.875),
 			radius = this.GP.relGU2P(0.125);
+			
+		let i = 1,
+			angle = -2 * pointSep;
 		
-		for (let i = 0; i < this.player.ammo; i++) {
+		for (; i <= this.player.ammo; i++) {
+			let centre = Vec2(Math.cos(angle) * offset, Math.sin(angle) * offset);
+			ammoSpr.drawCircle(centre.x, centre.y, radius);
+			
+			angle -= pointSep;
+		}
+		
+		if (!Number.isInteger(this.player.ammo)) {
+			// Draw the last clip as a partial dot, to represent a partial clip.
+			let centre = Vec2(Math.cos(angle) * offset, Math.sin(angle) * offset),
+				prop = this.player.ammo - Math.floor(this.player.ammo),
+				startAngle = (utils.PI * -0.5) - (utils.TAU * prop); 
+			
+			ammoSpr.arc(centre.x, centre.y, radius, startAngle, utils.PI * -0.5).lineTo(centre.x, centre.y);
+		}
+		
+		/*for (let i = 0; i < this.player.ammo; i++) {
 			let angle = -(i + 2) * pointSep;
 			let centre = Vec2(Math.cos(angle) * offset, Math.sin(angle) * offset);
 			
 			ammoSpr.drawCircle(centre.x, centre.y, radius);
-		}
+		}*/
 		
 		cursorStage.stateData.tint = this.sprites.gun.tint
 		cursorStage.children.forEach((element) => { element.tint = this.sprites.gun.tint; });
@@ -2559,6 +2704,11 @@ prefabs.mixins['spawner_enemy_walker'] = (superclass) => class extends superclas
 		this._totalTimerSlices = 16;
 		this._currentTimerSlices = 0;
 		
+		this.sprites.counter = new PIXI.Graphics();
+		this.sprites.counter.zIndex = 16;
+		this.sprites.counter.tint = 0x000000;
+		this.sprites.addChild(this.sprites.counter);
+		
 		if (super.setup) super.setup(options);
 	}
 	
@@ -2602,6 +2752,7 @@ prefabs.mixins['spawner_enemy_walker'] = (superclass) => class extends superclas
 					startGoingRight: direction
 				});
 				this.spawns.push(newEnemy);
+				this.redrawCounter();
 			}
 		}
 	}
@@ -2638,13 +2789,31 @@ prefabs.mixins['spawner_enemy_walker'] = (superclass) => class extends superclas
 		}
 	}
 	
-	removeFromSpawnList(enemy) {
-		let index = this.spawns.findIndex((element) => (element === enemy));
-		if (index != null && index !== -1) { this.spawns.splice(index, 1); }
+	redrawCounter() {
+		let seg = utils.TAU / this.preset.maxCount,
+			halfSeg = seg * 0.5,
+			angle = (this.rotation - utils.PI / 2) + halfSeg;
+			
+		let posRad = this.GP.relGU2P(0.75 * 0.5),
+			bobbleRad = this.GP.relGU2P(0.125 * 0.5);
+			
+		this.sprites.counter.clear();
+		this.sprites.counter.lineStyle(0, 0, 0);
+		this.sprites.counter.beginFill(0xffffff, 1);
+		
+		for (let i = 0; i < this.spawns.length; i++) {
+			let centre = new PIXI.Point(Math.cos(angle) * posRad, Math.sin(angle) * posRad);
+			this.sprites.counter.drawCircle(centre.x, centre.y, bobbleRad);
+			angle += seg;
+		}
 	}
 	
-	destructor(options) {
-		if (super.destructor) super.destructor(options);
+	removeFromSpawnList(enemy) {
+		let index = this.spawns.findIndex((element) => (element === enemy));
+		if (index != null && index !== -1) {
+			this.spawns.splice(index, 1);
+			this.redrawCounter();
+		}
 	}
 }
 
@@ -3070,7 +3239,7 @@ prefabs.mixins['enemy_charger'] = (superclass) => class extends superclass {
 			localAnchorB: Vec2(0.0, 0.0)
 		}, this.body, this.prow.body));
 		
-		// Setup ground sensor.
+		// Setup ground sensors.
 		this.groundSensor = this.GP.makeObject('enemy_sensor', this.name + '_sensor', this.position.clone().sub(Vec2(0.0, 0.5)), 0);
 		this.groundSensor.body.setFixedRotation(true);
 		let joint2 = this.GP.world.createJoint(planck.RevoluteJoint({
@@ -3232,15 +3401,22 @@ prefabs.mixins['enemy_charger'] = (superclass) => class extends superclass {
 			let prowAng = this.prow.body.getAngle(),
 				prowAngVel = this.prow.body.getAngularVelocity(),
 				desAng = 0;
+				
+			let canTurnCW	= (this.prow.sensors.cw.body.getContactList()	== null),
+				canTurnACW	= (this.prow.sensors.acw.body.getContactList()	== null);
 			
-			if (this._desProwLock === 0) { desAng = (utils.PI * 0.5) - 0.05; }
-			else if (this._desProwLock === 1) { desAng = -(utils.PI * 0.5) + 0.05; }
+			if (this._desProwLock === 0) { desAng = (utils.PI * 0.5); }
+			else if (this._desProwLock === 1) { desAng = -(utils.PI * 0.5); }
 			else if (this._desProwLock === 2) { desAng = 0; }
+			
+			let squeezeLatch = false; // Is this a good or helpful variable name? No. Does it make me happy? Yes.
+			if (prowAng < 0 && !canTurnCW) { desAng = -(utils.PI * 0.5); squeezeLatch = true }
+			if (prowAng > 0 && !canTurnACW) { desAng = (utils.PI * 0.5); squeezeLatch = true }
 			
 			let relAng = utils.bearingDelta(prowAng, desAng);
 				
-			if (Math.abs(relAng) < (utils.PI / 180) && Math.abs(prowAngVel) < 0.05) {
-				// Basically upright, basically stable.
+			if (Math.abs(relAng) < (utils.PI / 180) && Math.abs(prowAngVel) < 0.05 && !squeezeLatch) {
+				// Basically on-target, basically stable.
 				this.prow.body.setTransform(this.prow.body.getPosition(), desAng);
 				this.prow.body.setFixedRotation(true);
 				this._prowLock = this._desProwLock;
@@ -3294,19 +3470,41 @@ prefabs.mixins['enemy_charger_prow'] = (superclass) => class extends superclass 
 		this._parent = options.parentCharger;
 		this.body.setFixedRotation(true);
 		
+		// Sensors
+		this.sensors = {};
+		
+		this.sensors.cw = this.GP.makeObject('enemy_sensor', this.name + '_sensor_cw', this.position.clone().add(Vec2(-0.3125, 0.375)), 0);
+		let joint1 = this.GP.world.createJoint(planck.WeldJoint({
+			frequencyHz : 0.0,
+			dampingRatio : 0.0,
+			localAnchorA: Vec2(-0.3125, 0.375),
+			localAnchorB: Vec2(0, 0),
+			referenceAngle: 0
+		}, this.body, this.sensors.cw.body));
+		
+		this.sensors.acw = this.GP.makeObject('enemy_sensor', this.name + '_sensor_acw', this.position.clone().add(Vec2(0.3125, 0.375)), 0);
+		let joint2 = this.GP.world.createJoint(planck.WeldJoint({
+			frequencyHz : 0.0,
+			dampingRatio : 0.0,
+			localAnchorA: Vec2(0.3125, 0.375),
+			localAnchorB: Vec2(0, 0),
+			referenceAngle: 0
+		}, this.body, this.sensors.acw.body));
+		
 		if (super.setup) super.setup(options);
 	}
 	
-	updateContact() {
-		for (let c = this.body.getContactList(); c != null; c = c.next) {
-			let otherIsPlayer = (c.other.gameobject != null) ? (c.other.gameobject.type === 'player') : false;
-			if (otherIsPlayer) { this._parent._stunContact = true; }
-		}
+	update(deltaMS) {
+		this.sensors.cw.update(deltaMS);
+		this.sensors.acw.update(deltaMS);
+		if (super.update) super.update(deltaMS);
 	}
 	
-	//damage(lostHP) {
-		//this._parent.damage(lostHP);
-	//}
+	destructor(options) {
+		this.sensors.cw.destroy(true);
+		this.sensors.acw.destroy(true);
+		if (super.destructor) super.destructor(options);
+	}
 }
 
 //	_______________________________________________________
@@ -3481,7 +3679,7 @@ prefabs.door_wall = {
 			name: 'Block',
 			shape: planck.Box(0.5, 0.5),
 			
-			density: 5.0,
+			density: 20.0,
 			friction: 0.75,
 			restitution: 0.25,
 			
@@ -4575,9 +4773,9 @@ prefabs.enemy_charger = {
 	sprites: [
 		{
 			tex: "enemy_charger_base.png",
-			tint: 0xff0000,
-			anchor: Vec2(0.5, 0.6),
-			scale: Vec2(1, 1.25),
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.66666),
+			scale: Vec2(1, 1.5),
 			pos: Vec2(0, 0),
 			rot: 0,
 			zIndex: 10
@@ -4643,11 +4841,11 @@ prefabs.enemy_charger_prow = {
 		{
 			name: 'body',
 			shape: planck.Polygon([
-				Vec2(-0.47,	0.5),
-				Vec2(0,			0.75),
-				Vec2(0.47,		0.5),
-				Vec2(0.475,		0.25),
-				Vec2(-0.475,	0.25)
+				Vec2(-0.46,		0.5825),
+				Vec2(0,			0.8125),
+				Vec2(0.46,		0.5825),
+				Vec2(0.46,		0.0),
+				Vec2(-0.46,		0.0)
 			]),
 			
 			density: 15.0,

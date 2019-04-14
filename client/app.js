@@ -10,12 +10,15 @@ const PNG = require('pngjs/browser').PNG;
 
 let Gameplay;
 var GP;
+var menus;
 var utils = require('./js/utils');
 
 //var fs = require('fs'),
 //	PNG = require('pngjs').PNG;
 
 let type = "WebGL";
+
+var activeUpdated = null;
 
 if(!PIXI.utils.isWebGLSupported()) {
 	type = "canvas";
@@ -39,7 +42,7 @@ let world = planck.World({
 //	Window setup
 //	***
 
-let winInSize, app, bucket;
+let winInSize, app, bucket, settings;
 
 function setupApp() {
 	// Useful code stolen from https://andylangton.co.uk/blog/development/get-viewportwindow-size-width-and-height-javascript , many thanks.
@@ -163,6 +166,20 @@ function setupApp() {
 	app.renderer.plugins.interaction.cursorStyles.red		= "url('cursors/cursor_red_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
 	app.renderer.plugins.interaction.cursorStyles.green		= "url('cursors/cursor_green_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
 	app.renderer.plugins.interaction.cursorStyles.blue		= "url('cursors/cursor_blue_" + bucket.pixelScaleFactor + "p.png') " + halfPSF + " " + halfPSF + ",auto";
+	
+	settings = {
+		autoReload: true,
+		autoSlowAim: true,
+		
+		pixelOffset:		new PIXI.Point(bucket.xOffset, bucket.yOffset),
+		pixelSize:			new PIXI.Point(bucket.width, bucket.height),
+		
+		pixelScaleFactor:	bucket.pixelScaleFactor,	// 1 game unit (tile / GU) translated to PIXI units (pixels).
+		meterScaleFactor:	1,							// 1 game unit (tile / GU) translated to 1 box2D units (meters).
+		levelSize:			Vec2(34, 34),				// In GU. Note, origin is in bottom left.
+		pixelOrigin:		Vec2(0, 34),				// In GU. PIXI's origin is in the top left of the screen, this is the location of that point in gameplay space.
+		meterOrigin:		Vec2(0, 0)					// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
+	};
 }
 
 setupApp();
@@ -170,7 +187,9 @@ setupApp();
 loader
 	.add([ // Add assets to import below:
 		"assets/gameplay.json",
-		"assets/particles.json"
+		"assets/particles.json",
+		"assets/menu.json",
+		"assets/main_decor.png"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -185,12 +204,15 @@ function setup() {
 	// More Aliases
 	gameplayTex = resources["assets/gameplay.json"].textures;
 	
-	loadLevel("");
+	menus = require('./js/menus');
+	
+	activeUpdated = new menus.make_main(app, settings);
+	//loadLevel('Tutorial_05');
 	
 	app.ticker.add(delta => gameLoop(delta));
 }
 
-function loadLevel(levelData) {
+function loadLevel(levelName) {
 	/*let sprite1 = new Sprite(
 		gameplayTex["player_body.png"]
 	);
@@ -215,25 +237,14 @@ function loadLevel(levelData) {
 	
 	IH.setup(app.view);
 	
-	GP = new Gameplay(world, app, IH, {
-		autoReload: true,
-		autoSlowAim: true,
-		
-		pixelOffset:		new PIXI.Point(bucket.xOffset, bucket.yOffset),
-		
-		pixelScaleFactor:	bucket.pixelScaleFactor,	// 1 game unit (tile / GU) translated to PIXI units (pixels).
-		meterScaleFactor:	1,							// 1 game unit (tile / GU) translated to 1 box2D units (meters).
-		levelSize:			Vec2(34, 34),				// In GU. Note, origin is in bottom left.
-		pixelOrigin:		Vec2(0, 34),				// In GU. PIXI's origin is in the top left of the screen, this is the location of that point in gameplay space.
-		meterOrigin:		Vec2(0, 0)					// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
-	});
+	GP = new Gameplay(world, app, IH, settings);
 	
 	let levelStream;
 	
-	let fetchLevelProm = fetch('./levels/Tutorial_01.png').then(
+	let fetchLevelProm = fetch('./levels/' + levelName + '.png').then(
 		(response) => {
 			if (response.status !== 200) {
-				console.log('Issue loading level file from server. Status Code: ' + response.status);
+				console.log("Issue loading level file '" + levelName + "' from server. Status Code: " + response.status);
 				return;
 			}
 			
@@ -265,6 +276,7 @@ function loadLevel(levelData) {
 		console.log('Oh dear! You died!');
 	}
 	
+	activeUpdated = GP;
 	/*for (let i = 0; i < 34; i++) {
 		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
 	}
@@ -329,10 +341,10 @@ function loadLevel(levelData) {
 		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);
 		let test = GP.makeObject('test', 'test_' + i, pos, 0, {maxHP: (Math.random() * 80) + 20});
 	}*/
-	
 }
 
 function gameLoop(delta) {
 	let deltaMS = app.ticker.deltaMS;	
-	GP.update(deltaMS);
+	
+	if (activeUpdated != null) { activeUpdated.update(deltaMS); }
 }

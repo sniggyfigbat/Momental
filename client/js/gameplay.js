@@ -42,7 +42,7 @@ function Gameplay(world, app, IH, settings) {
 	this.trigger_player_death = (playerPosGU) => {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
-			this._afterEndTime = 1000;
+			this._afterEndTime = 1500;
 			this._endVictory = false;
 			
 			visuals.player_death(this, playerPosGU.clone());
@@ -51,7 +51,7 @@ function Gameplay(world, app, IH, settings) {
 	this.trigger_player_reached_goal = (goal) => {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
-			this._afterEndTime = 3000;
+			this._afterEndTime = 3500;
 			this._endVictory = true;
 			
 			this.getObjectsOfType("player")[0].destroy(false);
@@ -106,6 +106,16 @@ function Gameplay(world, app, IH, settings) {
 	this.slowOverlay.visible = false;
 	this.slowOverlay.zIndex = 11;
 	this.stage.addChild(this.slowOverlay);
+	
+	// Blackout visual
+	this._startDarkTimer = 500;
+	this.darkOverlay = new PIXI.Graphics;
+	this.darkOverlay.lineStyle(0, 0, 0);
+	this.darkOverlay.beginFill(0x000000, 1);
+	this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+	this.darkOverlay.visible = true;
+	this.darkOverlay.zIndex = 101;
+	this.stage.addChild(this.darkOverlay);
 	
 	// Input Handler
 	console.assert(IH != null, 'ERROR: Gameplay object created with null Input Handler!'); 
@@ -1057,13 +1067,27 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 Gameplay.prototype.update = function(deltaMS) {
 	if (this._gameEnded != false) {
 		this._afterEndTime -= deltaMS;
+		
+		if (this._afterEndTime < 500) {
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = 1 - (this._afterEndTime / 500);
+		}
+		
 		if (this._afterEndTime < 0) {
 			if (this._endVictory) { this.trigger_end_victory(); }
 			else { this.trigger_end_defeat(); }
 		}
 	}
-	
-	
+	else {
+		if (this._startDarkTimer > 0) {
+			this._startDarkTimer -= deltaMS;
+			this.darkOverlay.alpha = this._startDarkTimer / 500;
+			if (this._startDarkTimer <= 0) {
+				this._startDarkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+	}
 	
 	// Update cursor stage position
 	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
@@ -1074,6 +1098,12 @@ Gameplay.prototype.update = function(deltaMS) {
 	this.cursorStage.visible = mouseInFrame;
 	
 	let realDeltaMS = deltaMS;
+	
+	let player = this.getObjectsOfType('player', false)[0];
+	if (player == null && this.timeFactor < 1) {
+		this.timeFactor += deltaMS / 1000;
+		this.timeFactor = (this.timeFactor < 1) ? this.timeFactor : 1;
+	}
 	
 	deltaMS *= this.timeFactor;
 	let deltaS = deltaMS / 1000;
