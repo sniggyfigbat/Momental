@@ -18,7 +18,7 @@ let Sprite = PIXI.Sprite,
 	Vec2 = planck.Vec2,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures;
 
-function Gameplay(world, app, IH, settings) {
+function Gameplay(app, IH, settings, runData) {
 	this.settings = (settings != null) ? settings : {
 		autoReload: true,
 		autoSlowAim: true,
@@ -31,19 +31,22 @@ function Gameplay(world, app, IH, settings) {
 		pixelOrigin:		Vec2(0, 34),	// In GU. PIXI's origin is in the top left of the screen, this is the location of that point in gameplay space.
 		meterOrigin:		Vec2(0, 0)		// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
 	}
+	this.runData = runData;
 	
 	// Handler functions
+	this._behaviour = null; // Holds state for activating handler functions.
+	this._behaviourTrigger = false;
 	this.trigger_end_victory	= null;
 	this.trigger_end_defeat		= null;
 	
 	this._gameEnded = false;
 	this._afterEndTime = 0;
-	this._endVictory = false;
+	this._endState = 0;
 	this.trigger_player_death = (playerPosGU) => {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
 			this._afterEndTime = 1500;
-			this._endVictory = false;
+			this._endState = 0;
 			
 			visuals.player_death(this, playerPosGU.clone());
 		}
@@ -52,16 +55,41 @@ function Gameplay(world, app, IH, settings) {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
 			this._afterEndTime = 3500;
-			this._endVictory = true;
+			this._endState = 1;
 			
 			this.getObjectsOfType("player")[0].destroy(false);
 			visuals.player_ascension(this, goal.position);
 		}
 	}
+	this.trigger_player_pressed_skip = () => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 1500;
+			this._endState = 2;
+			
+			let player = this.getObjectsOfType("player")[0];
+			
+			visuals.player_death(this, player.position);
+			player.destroy(false);
+		}
+	}
+	this.trigger_player_pressed_restart = () => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 1500;
+			this._endState = 0;
+			
+			let player = this.getObjectsOfType("player")[0];
+			
+			visuals.player_death(this, player.position);
+			player.destroy(false);
+		}
+	}
 	
 	// Box2D world.	
-	console.assert(world != null, 'ERROR: Gameplay object created with null world!'); 
-	this.world = world;
+	this.world = planck.World({
+		gravity: Vec2(0, -10)
+	});
 
 	// Pixi.js application.
 	console.assert(app != null, 'ERROR: Gameplay object created with null PIXI app!'); 
@@ -97,8 +125,16 @@ function Gameplay(world, app, IH, settings) {
 	this.particleStageUpper.zIndex = 50;
 	this.stage.addChild(this.particleStageUpper);
 	
-	// Slowdown visual
+	// Background
 	let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+	this.background = new PIXI.Graphics;
+	this.background.lineStyle(0, 0, 0);
+	this.background.beginFill(0xffffff, 1);
+	this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+	this.background.zIndex = -1;
+	this.stage.addChild(this.background);
+	
+	// Slowdown visual
 	this.slowOverlay = new PIXI.Graphics;
 	this.slowOverlay.lineStyle(0, 0, 0);
 	this.slowOverlay.beginFill(0xd9e2ff, 1);
@@ -133,7 +169,10 @@ function Gameplay(world, app, IH, settings) {
 	
 	this.objClasses = {};
 	
-	world.on('pre-solve', (contact) => {
+	// Stats
+	this.runTimeS = 0;
+	
+	this.world.on('pre-solve', (contact) => {
 		// Admin / Setup:
 		
 		let fixtureA = contact.getFixtureA();
@@ -190,7 +229,7 @@ function Gameplay(world, app, IH, settings) {
 		}
 	});
 	
-	world.on('begin-contact', (contact) => {
+	this.world.on('begin-contact', (contact) => {
 		// Admin / Setup:
 		
 		let fixtureA = contact.getFixtureA();
@@ -322,7 +361,7 @@ function Gameplay(world, app, IH, settings) {
 		}
 	});
 	
-	world.on('post-solve', (contact, impulse) => {
+	this.world.on('post-solve', (contact, impulse) => {
 		// Admin / Setup:
 		
 		let totalNormalImpulse = 0;
@@ -454,6 +493,9 @@ Gameplay.prototype.loadLevel = function(level) {
 		return false;
 	}
 	
+	let restartButton = false,
+		skipButton = false;
+	
 	for (let i = 0; i < 34; i++) {	// x
 		for (let j = 0; j < 34; j++) {	// y
 			let index = ((j * 34) + i) * 4;
@@ -466,10 +508,17 @@ Gameplay.prototype.loadLevel = function(level) {
 					else {
 						this.makeObject(type, null, Vec2(i + 0.5, (34 - j) - 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
 					}
-				} 
+				}
+				
+				if (typeID == 22) { skipButton = true; }
+				if (typeID == 23) { restartButton = true; }
 			}
 		}
 	}
+	
+	// UI
+	if (!restartButton) { this.makeObject('ui_restart', null, Vec2(32.5, 33.5), 0); }
+	if (!skipButton) { this.makeObject('ui_timer_skip', null, Vec2(33.5, 33.5), 0); }
 	
 	// Kill-borders.
 	for (let x = 0; x < 35; x++) {
@@ -1074,8 +1123,27 @@ Gameplay.prototype.update = function(deltaMS) {
 		}
 		
 		if (this._afterEndTime < 0) {
-			if (this._endVictory) { this.trigger_end_victory(); }
-			else { this.trigger_end_defeat(); }
+			if (this._endState == 1) {
+				this._behaviourTrigger = true;
+				this._behaviour = "trigger_end_victory";
+				this._behaviourOptions = {
+					runTime: this.runTimeS
+				};
+			}
+			else if (this._endState == 2) {
+				this._behaviourTrigger = true;
+				this._behaviour = "trigger_end_skip";
+				this._behaviourOptions = {
+					runTime: this.runTimeS
+				};
+			}
+			else {
+				this._behaviourTrigger = true;
+				this._behaviour = "trigger_end_defeat";
+				this._behaviourOptions = {
+					runTime: this.runTimeS
+				};
+			}
 		}
 	}
 	else {
@@ -1088,6 +1156,9 @@ Gameplay.prototype.update = function(deltaMS) {
 			}
 		}
 	}
+	
+	// Update runTimeS
+	if (this.runTimeS < 300) { this.runTimeS += deltaMS * 0.001; }
 	
 	// Update cursor stage position
 	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
@@ -1159,6 +1230,10 @@ Gameplay.prototype.update = function(deltaMS) {
 	this.IH.update(deltaMS);
 	
 	this.cleanup();
+	
+	if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+		this[this._behaviour](this._behaviourOptions);
+	}
 }
 
 Gameplay.prototype.cleanup = function() {
@@ -1188,6 +1263,12 @@ Gameplay.prototype.cleanup = function() {
 	}, this);
 	
 	this._markedForDeathVisuals.length = 0;
+}
+
+Gameplay.prototype.destroy = function() {
+	this.stage.destroy({ children: true });
+	this.cursorStage.destroy({ children: true });
+	delete this.world;
 }
 
 module.exports = Gameplay;

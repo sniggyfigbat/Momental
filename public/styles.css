@@ -2,3 +2,8 @@
 	font-family: 'Moderna';
 	src: url('assets/moderna.ttf');
 }
+
+@font-face {
+	font-family: 'Roboto';
+	font-style: light;
+}

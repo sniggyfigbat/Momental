@@ -9,7 +9,6 @@ const uuid = require('uuid');
 const PNG = require('pngjs/browser').PNG;
 
 let Gameplay;
-var GP;
 var menus;
 var utils = require('./js/utils');
 
@@ -18,7 +17,9 @@ var utils = require('./js/utils');
 
 let type = "WebGL";
 
-var activeUpdated = null;
+var activeUpdated = null,
+	runData = null,
+	playerData = null;
 
 if(!PIXI.utils.isWebGLSupported()) {
 	type = "canvas";
@@ -32,11 +33,6 @@ let Application = PIXI.Application,
 	Vec2 = planck.Vec2;
 	
 let gameplayTex;
-
-// Create basic Planck/Box2D vars.
-let world = planck.World({
-  gravity: Vec2(0, -10)
-});
 
 //	***
 //	Window setup
@@ -101,7 +97,7 @@ function setupApp() {
 		
 	// Create a Pixi Application
 	//let app = new Application({width: 544, height: 544, backgroundColor: 0xffffff});
-	app = new Application({width: winInSize.x, height: winInSize.y, backgroundColor: 0xffffff, antialias: true});
+	app = new Application({width: winInSize.x, height: winInSize.y, backgroundColor: 0x000000, antialias: true});
 
 	// Add the canvas that Pixi automatically created for you to the HTML document
 	document.body.appendChild(app.view);
@@ -189,7 +185,8 @@ loader
 		"assets/gameplay.json",
 		"assets/particles.json",
 		"assets/menu.json",
-		"assets/main_decor.png"
+		"assets/main_decor.png",
+		"assets/quiz_decor.png"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -206,38 +203,213 @@ function setup() {
 	
 	menus = require('./js/menus');
 	
-	activeUpdated = new menus.make_main(app, settings);
+	//activeUpdated = new menus.main(app, settings);
+	//activeUpdated.b_play = load_menu_quiz_player;
 	//loadLevel('Tutorial_05');
+	load_menu_main();
 	
 	app.ticker.add(delta => gameLoop(delta));
 }
 
-function loadLevel(levelName) {
-	/*let sprite1 = new Sprite(
-		gameplayTex["player_body.png"]
-	);
-
-	app.stage.addChild(sprite1);
-	sprite1.anchor.set(0.5, 0.5);
-	sprite1.scale.set(0.25, 0.25);
-	sprite1.position.set(272, 272);
-
-	let sprite2 = new Sprite(
-		gameplayTex["player_weapon.png"]
-	);
-
-	app.stage.addChild(sprite2);
-	sprite2.tint = 0xff0000;
-	sprite2.anchor.set(0.5, 0.5);
-	sprite2.scale.set(0.25, 0.25);
-	sprite2.position.set(272, 272);*/
+let load_menu_main = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.main(app, settings);
 	
+	activeUpdated.b_tutorial = startTutorial;
+	activeUpdated.b_play = startRun;
+	activeUpdated.b_options = load_menu_options;
+}
+
+let load_menu_options = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.options(app, settings);
+	
+	activeUpdated.b_back = load_menu_main;
+}
+
+let startRun = (opts) => {
+	runData = {
+		runType: 'standard',
+		currentIndex: 0,
+		id: uuid.v4(),
+		levels: [
+			{
+				id: 'Tutorial_01',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_02',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_03',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_04',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_05',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			}
+		]
+	}
+	
+	if (playerData == null) {
+		load_menu_quiz_player();
+	}
+	else {
+		runData.playerProfile = playerData;
+		level_load(runData.levels[0].id);
+	}
+}
+
+let startTutorial = (opts) => {
+	runData = {
+		runType: 'tutorial',
+		currentIndex: 0,
+		id: uuid.v4(),
+		levels: [
+			{
+				id: 'Tutorial_01',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_02',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_03',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_04',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_05',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			}
+		]
+	}
+	
+	level_load(runData.levels[0].id);
+}
+
+let load_menu_quiz_player = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.quiz_player(app, settings);
+	
+	activeUpdated.b_continue = (opts) => {
+		playerData = opts;
+		runData.playerProfile = playerData;
+		level_load(runData.levels[0].id);
+	};
+}
+
+let load_menu_quiz_feedback = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.quiz_feedback(app, settings, runData.currentIndex, runData.levels[runData.currentIndex].victoryRunTime);
+	
+	activeUpdated.b_continue = (opts) => {
+		runData.levels[runData.currentIndex].feedback = opts;
+		runData.levels[runData.currentIndex].completed = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_editor_standin(); }
+	};
+}
+
+let load_menu_quiz_skip = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.quiz_skip(app, settings);
+	
+	activeUpdated.b_continue = (opts) => {
+		runData.levels[runData.currentIndex].feedback = opts;
+		runData.levels[runData.currentIndex].completed = true;
+		runData.levels[runData.currentIndex].skipped = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_editor_standin(); }
+	};
+}
+
+let load_editor_standin = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.editor_standin(app, settings);
+	
+	activeUpdated.b_continue = load_menu_main;
+}
+
+let level_load = (levelName) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
 	Gameplay = require('./js/gameplay');
 	const IH = require('./js/inputhandler');
 	
 	IH.setup(app.view);
 	
-	GP = new Gameplay(world, app, IH, settings);
+	activeUpdated = new Gameplay(app, IH, settings, runData);
 	
 	let levelStream;
 	
@@ -255,96 +427,52 @@ function loadLevel(levelName) {
 	.then(buffer => {
 		levelStream = new PNG({ filterType:4 }).parse( buffer, function(error, data) {
 			if (error != null) { console.log('ERROR: In level image read; ' + error); }
-			else { GP.loadLevel(levelStream); }
+			else { activeUpdated.loadLevel(levelStream); }
 		});
 	})
 	.catch(function(err) {
 		console.log('Fetch Error: ', err);
 	});
-		
-	/*	.on('parsed'), function() {
-			
-		}*/
 	
-	//GP.loadLevel(resources[""].texture);
+	activeUpdated.trigger_end_victory = level_win;
 	
-	GP.trigger_end_victory = () => {
-		console.log('Hooray! You win!');
+	activeUpdated.trigger_end_defeat = (opts) => {
+		runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
+		runData.levels[runData.currentIndex].totalRunDeaths++;
+		level_load(runData.levels[runData.currentIndex].id);
 	}
 	
-	GP.trigger_end_defeat = () => {
-		console.log('Oh dear! You died!');
-	}
-	
-	activeUpdated = GP;
-	/*for (let i = 0; i < 34; i++) {
-		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
-	}
-	
-	for (let i = 0; i < 34; i++) {
-		let walli = GP.makeObject('wall', 'wall_top_' + i, Vec2(i + 0.5, 33.5), 0);
-	}
-	
-	for (let i = 1; i < 33; i++) {
-		let walli = GP.makeObject('wall', 'wall_left_' + i, Vec2(0.5, i + 0.5), 0);
-	}
-	
-	for (let i = 1; i < 33; i++) {
-		let walli = GP.makeObject('wall', 'wall_right_' + i, Vec2(33.5, i + 0.5), 0);
-	}
-	
-	let wall1 = GP.makeObject('wall', 'wall01', Vec2(6.5, 9.5), 0);
-	//player1 = GP.makeObject('player', 'player01', Vec2(0.5, 7.5), 0);
-	
-	let wall2 = GP.makeObject('wall', 'wall02', Vec2(1.5, 8.5), 0);
-	let wall3 = GP.makeObject('wall', 'wall03', Vec2(2.5, 8.5), 0);
-	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);*/
-	//let player = GP.makeObject('player', 'player02', Vec2(18.5, 21.5), 0, {
-		/*hasJumpField: true,
-		hasPullField: true,
-		//canSlowTime: true, Don't have enough bits for this. Assume always true.
-		
-		hasShotgun: true,
-		shotgunStartsWithAmmo: true,
-		hasLauncher: true,
-		launcherStartsWithAmmo: true,
-		hasTesla: true,
-		teslaStartsWithAmmo: true,
-		
-		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?*/
-		
-		/*hasJumpField: false,
-		hasPullField: false,
-		//canSlowTime: true, Don't have enough bits for this. Assume always true.
-		
-		hasShotgun: false,
-		shotgunStartsWithAmmo: false,
-		hasLauncher: false,
-		launcherStartsWithAmmo: false,
-		hasTesla: false,
-		teslaStartsWithAmmo: false,
-		
-		startingAmmo: 0	// 3 bits, 0-7. In-game-max of 6?
-		});*/
-	/*//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
-	
-	let wall5 = GP.makeObject('wall', 'wall05', Vec2(4.5, 8.75), utils.PI/6);
-	//player4 = GP.makeObject('player', 'player04', Vec2(3.5, 11.5), 0);
-	
-	let wall6 = GP.makeObject('wall', 'wall06', Vec2(5.5, 8.75), -utils.PI/6);
-	
-	//let test = GP.makeObject('test', 'test', Vec2(17, 17), 0);
-	//wall1.foo().bar();
-	//player1.bar().baz();*/
-	
-	/*for (let i = 0; i < 10; i++) {
-		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);
-		let test = GP.makeObject('test', 'test_' + i, pos, 0, {maxHP: (Math.random() * 80) + 20});
-	}*/
+	activeUpdated.trigger_end_skip = level_skip;
 }
 
-function gameLoop(delta) {
-	let deltaMS = app.ticker.deltaMS;	
+let level_win = (opts) => {
+	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
+	runData.levels[runData.currentIndex].victoryRunTime = opts.runTime;
 	
-	if (activeUpdated != null) { activeUpdated.update(deltaMS); }
+	if (runData.runType != 'tutorial') {load_menu_quiz_feedback(); }
+	else {
+		runData.levels[runData.currentIndex].completed = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_menu_main(); }
+	}
+}
+
+let level_skip = (opts) => {
+	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
+	runData.levels[runData.currentIndex].victoryRunTime = -1;
+	
+	if (runData.runType != 'tutorial') {load_menu_quiz_skip(); }
+	else {
+		runData.levels[runData.currentIndex].completed = true;
+		runData.levels[runData.currentIndex].skipped = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_menu_main(); }
+	}
+}
+
+let gameLoop = (delta) => {
+	let deltaMS = app.ticker.deltaMS;	
+	if (activeUpdated && activeUpdated.update) { activeUpdated.update(deltaMS); }
 }

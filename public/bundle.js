@@ -10990,7 +10990,6 @@ const uuid = __webpack_require__(13);
 const PNG = __webpack_require__(43).PNG;
 
 let Gameplay;
-var GP;
 var menus;
 var utils = __webpack_require__(44);
 
@@ -10999,7 +10998,9 @@ var utils = __webpack_require__(44);
 
 let type = "WebGL";
 
-var activeUpdated = null;
+var activeUpdated = null,
+	runData = null,
+	playerData = null;
 
 if(!PIXI.utils.isWebGLSupported()) {
 	type = "canvas";
@@ -11013,11 +11014,6 @@ let Application = PIXI.Application,
 	Vec2 = planck.Vec2;
 	
 let gameplayTex;
-
-// Create basic Planck/Box2D vars.
-let world = planck.World({
-  gravity: Vec2(0, -10)
-});
 
 //	***
 //	Window setup
@@ -11082,7 +11078,7 @@ function setupApp() {
 		
 	// Create a Pixi Application
 	//let app = new Application({width: 544, height: 544, backgroundColor: 0xffffff});
-	app = new Application({width: winInSize.x, height: winInSize.y, backgroundColor: 0xffffff, antialias: true});
+	app = new Application({width: winInSize.x, height: winInSize.y, backgroundColor: 0x000000, antialias: true});
 
 	// Add the canvas that Pixi automatically created for you to the HTML document
 	document.body.appendChild(app.view);
@@ -11170,7 +11166,8 @@ loader
 		"assets/gameplay.json",
 		"assets/particles.json",
 		"assets/menu.json",
-		"assets/main_decor.png"
+		"assets/main_decor.png",
+		"assets/quiz_decor.png"
 	])
 	.on("progress", loadProgressHandler)
 	.load(setup);
@@ -11187,38 +11184,213 @@ function setup() {
 	
 	menus = __webpack_require__(45);
 	
-	activeUpdated = new menus.make_main(app, settings);
+	//activeUpdated = new menus.main(app, settings);
+	//activeUpdated.b_play = load_menu_quiz_player;
 	//loadLevel('Tutorial_05');
+	load_menu_main();
 	
 	app.ticker.add(delta => gameLoop(delta));
 }
 
-function loadLevel(levelName) {
-	/*let sprite1 = new Sprite(
-		gameplayTex["player_body.png"]
-	);
-
-	app.stage.addChild(sprite1);
-	sprite1.anchor.set(0.5, 0.5);
-	sprite1.scale.set(0.25, 0.25);
-	sprite1.position.set(272, 272);
-
-	let sprite2 = new Sprite(
-		gameplayTex["player_weapon.png"]
-	);
-
-	app.stage.addChild(sprite2);
-	sprite2.tint = 0xff0000;
-	sprite2.anchor.set(0.5, 0.5);
-	sprite2.scale.set(0.25, 0.25);
-	sprite2.position.set(272, 272);*/
+let load_menu_main = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.main(app, settings);
 	
+	activeUpdated.b_tutorial = startTutorial;
+	activeUpdated.b_play = startRun;
+	activeUpdated.b_options = load_menu_options;
+}
+
+let load_menu_options = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.options(app, settings);
+	
+	activeUpdated.b_back = load_menu_main;
+}
+
+let startRun = (opts) => {
+	runData = {
+		runType: 'standard',
+		currentIndex: 0,
+		id: uuid.v4(),
+		levels: [
+			{
+				id: 'Tutorial_01',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_02',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_03',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_04',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_05',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			}
+		]
+	}
+	
+	if (playerData == null) {
+		load_menu_quiz_player();
+	}
+	else {
+		runData.playerProfile = playerData;
+		level_load(runData.levels[0].id);
+	}
+}
+
+let startTutorial = (opts) => {
+	runData = {
+		runType: 'tutorial',
+		currentIndex: 0,
+		id: uuid.v4(),
+		levels: [
+			{
+				id: 'Tutorial_01',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_02',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_03',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_04',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			},
+			{
+				id: 'Tutorial_05',
+				completed: false,
+				skipped: false,
+				totalRunTime: 0,
+				totalRunDeaths: 0,
+				victoryRunTime: null,
+				victoryRunInputs: null,
+				feedback: null
+			}
+		]
+	}
+	
+	level_load(runData.levels[0].id);
+}
+
+let load_menu_quiz_player = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.quiz_player(app, settings);
+	
+	activeUpdated.b_continue = (opts) => {
+		playerData = opts;
+		runData.playerProfile = playerData;
+		level_load(runData.levels[0].id);
+	};
+}
+
+let load_menu_quiz_feedback = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.quiz_feedback(app, settings, runData.currentIndex, runData.levels[runData.currentIndex].victoryRunTime);
+	
+	activeUpdated.b_continue = (opts) => {
+		runData.levels[runData.currentIndex].feedback = opts;
+		runData.levels[runData.currentIndex].completed = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_editor_standin(); }
+	};
+}
+
+let load_menu_quiz_skip = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.quiz_skip(app, settings);
+	
+	activeUpdated.b_continue = (opts) => {
+		runData.levels[runData.currentIndex].feedback = opts;
+		runData.levels[runData.currentIndex].completed = true;
+		runData.levels[runData.currentIndex].skipped = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_editor_standin(); }
+	};
+}
+
+let load_editor_standin = (opts) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
+	activeUpdated = new menus.editor_standin(app, settings);
+	
+	activeUpdated.b_continue = load_menu_main;
+}
+
+let level_load = (levelName) => {
+	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
 	Gameplay = __webpack_require__(46);
 	const IH = __webpack_require__(82);
 	
 	IH.setup(app.view);
 	
-	GP = new Gameplay(world, app, IH, settings);
+	activeUpdated = new Gameplay(app, IH, settings, runData);
 	
 	let levelStream;
 	
@@ -11236,98 +11408,54 @@ function loadLevel(levelName) {
 	.then(buffer => {
 		levelStream = new PNG({ filterType:4 }).parse( buffer, function(error, data) {
 			if (error != null) { console.log('ERROR: In level image read; ' + error); }
-			else { GP.loadLevel(levelStream); }
+			else { activeUpdated.loadLevel(levelStream); }
 		});
 	})
 	.catch(function(err) {
 		console.log('Fetch Error: ', err);
 	});
-		
-	/*	.on('parsed'), function() {
-			
-		}*/
 	
-	//GP.loadLevel(resources[""].texture);
+	activeUpdated.trigger_end_victory = level_win;
 	
-	GP.trigger_end_victory = () => {
-		console.log('Hooray! You win!');
+	activeUpdated.trigger_end_defeat = (opts) => {
+		runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
+		runData.levels[runData.currentIndex].totalRunDeaths++;
+		level_load(runData.levels[runData.currentIndex].id);
 	}
 	
-	GP.trigger_end_defeat = () => {
-		console.log('Oh dear! You died!');
-	}
-	
-	activeUpdated = GP;
-	/*for (let i = 0; i < 34; i++) {
-		let walli = GP.makeObject('wall', 'wall_base_' + i, Vec2(i + 0.5, 0.5), 0);
-	}
-	
-	for (let i = 0; i < 34; i++) {
-		let walli = GP.makeObject('wall', 'wall_top_' + i, Vec2(i + 0.5, 33.5), 0);
-	}
-	
-	for (let i = 1; i < 33; i++) {
-		let walli = GP.makeObject('wall', 'wall_left_' + i, Vec2(0.5, i + 0.5), 0);
-	}
-	
-	for (let i = 1; i < 33; i++) {
-		let walli = GP.makeObject('wall', 'wall_right_' + i, Vec2(33.5, i + 0.5), 0);
-	}
-	
-	let wall1 = GP.makeObject('wall', 'wall01', Vec2(6.5, 9.5), 0);
-	//player1 = GP.makeObject('player', 'player01', Vec2(0.5, 7.5), 0);
-	
-	let wall2 = GP.makeObject('wall', 'wall02', Vec2(1.5, 8.5), 0);
-	let wall3 = GP.makeObject('wall', 'wall03', Vec2(2.5, 8.5), 0);
-	let wall4 = GP.makeObject('wall', 'wall04', Vec2(3.5, 8.5), 0);*/
-	//let player = GP.makeObject('player', 'player02', Vec2(18.5, 21.5), 0, {
-		/*hasJumpField: true,
-		hasPullField: true,
-		//canSlowTime: true, Don't have enough bits for this. Assume always true.
-		
-		hasShotgun: true,
-		shotgunStartsWithAmmo: true,
-		hasLauncher: true,
-		launcherStartsWithAmmo: true,
-		hasTesla: true,
-		teslaStartsWithAmmo: true,
-		
-		startingAmmo: 6	// 3 bits, 0-7. In-game-max of 6?*/
-		
-		/*hasJumpField: false,
-		hasPullField: false,
-		//canSlowTime: true, Don't have enough bits for this. Assume always true.
-		
-		hasShotgun: false,
-		shotgunStartsWithAmmo: false,
-		hasLauncher: false,
-		launcherStartsWithAmmo: false,
-		hasTesla: false,
-		teslaStartsWithAmmo: false,
-		
-		startingAmmo: 0	// 3 bits, 0-7. In-game-max of 6?
-		});*/
-	/*//player3 = GP.makeObject('player', 'player03', Vec2(3, 11.5), 0);
-	
-	let wall5 = GP.makeObject('wall', 'wall05', Vec2(4.5, 8.75), utils.PI/6);
-	//player4 = GP.makeObject('player', 'player04', Vec2(3.5, 11.5), 0);
-	
-	let wall6 = GP.makeObject('wall', 'wall06', Vec2(5.5, 8.75), -utils.PI/6);
-	
-	//let test = GP.makeObject('test', 'test', Vec2(17, 17), 0);
-	//wall1.foo().bar();
-	//player1.bar().baz();*/
-	
-	/*for (let i = 0; i < 10; i++) {
-		let pos = Vec2((Math.random() * 31) + 1.5, (Math.random() * 31) + 1.5);
-		let test = GP.makeObject('test', 'test_' + i, pos, 0, {maxHP: (Math.random() * 80) + 20});
-	}*/
+	activeUpdated.trigger_end_skip = level_skip;
 }
 
-function gameLoop(delta) {
-	let deltaMS = app.ticker.deltaMS;	
+let level_win = (opts) => {
+	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
+	runData.levels[runData.currentIndex].victoryRunTime = opts.runTime;
 	
-	if (activeUpdated != null) { activeUpdated.update(deltaMS); }
+	if (runData.runType != 'tutorial') {load_menu_quiz_feedback(); }
+	else {
+		runData.levels[runData.currentIndex].completed = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_menu_main(); }
+	}
+}
+
+let level_skip = (opts) => {
+	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
+	runData.levels[runData.currentIndex].victoryRunTime = -1;
+	
+	if (runData.runType != 'tutorial') {load_menu_quiz_skip(); }
+	else {
+		runData.levels[runData.currentIndex].completed = true;
+		runData.levels[runData.currentIndex].skipped = true;
+		runData.currentIndex++;
+		if (runData.currentIndex < 5) { level_load(runData.levels[runData.currentIndex].id); }
+		else { load_menu_main(); }
+	}
+}
+
+let gameLoop = (delta) => {
+	let deltaMS = app.ticker.deltaMS;	
+	if (activeUpdated && activeUpdated.update) { activeUpdated.update(deltaMS); }
 }
 
 /***/ }),
@@ -27246,13 +27374,15 @@ let menus = {};
 
 let defaultTextStyle = class {
 	// I'm literally just using this as a easy way of making PIXI.TextStyle standins.
-	constructor(pixelScaleFactor, sizePreset) {
+	constructor(pixelScaleFactor, sizePreset, family) {
 		this.align = 'left';
-		this.fontFamily = 'Moderna';
+		this.fontFamily = family || 'Moderna';
 		
 		let sizeFac = pixelScaleFactor / 16;
-		if (sizePreset == 'small') { this.fontSize = sizeFac * 16; }
-		if (sizePreset == 'large') { this.fontSize = sizeFac * 32; }
+		if (sizePreset == 'vsmall') { this.fontSize = sizeFac * 8; }
+		else if (sizePreset == 'small') { this.fontSize = sizeFac * 16; }
+		else if (sizePreset == 'large') { this.fontSize = sizeFac * 32; }
+		else if (sizePreset == 'vlarge') { this.fontSize = sizeFac * 48; }
 		else { /* sizePreset == 'medium' */ this.fontSize = sizeFac * 24; }
 		
 		// Anything else?
@@ -27271,8 +27401,8 @@ let fadeData = class {
 	
 	get triggered() { return this._triggered; }
 	
-	set triggered(newState) {
-		let flag = newState != null ? newState : true;
+	set triggered(flag) {
+		flag = flag !== false;
 		if (flag != this._triggered) {
 			this._triggered = flag;
 			
@@ -27315,8 +27445,8 @@ let fadeTintData = class {
 	
 	get triggered() { return this._triggered; }
 	
-	set triggered(newState) {
-		let flag = newState != null ? newState : true;
+	set triggered(flag) {
+		flag = flag !== false;
 		if (flag != this._triggered) {
 			this._triggered = flag;
 			
@@ -27351,7 +27481,267 @@ let fadeTintData = class {
 	}
 }
 
-menus.make_main = class {
+let radioController = class {
+	constructor(titleString, parentPIXIContainer, position, pixelScaleFactor, optionCount, explaText) {
+		this.titleString = titleString || 'default';
+		this.optionCount = optionCount || 5;
+		this.explaText = explaText || null;
+		
+		if (position == null) { position = new PIXI.Point(0, 0); }
+		if (pixelScaleFactor == null) { pixelScaleFactor = 16; }
+		
+		let sprSF = (pixelScaleFactor / 64);
+		let xOff, yOff;
+		
+		this.sprites = new PIXI.Container();
+		this.sprites.position = position;
+		this.sprites.zIndex = 15;
+		parentPIXIContainer.addChild(this.sprites);
+		
+		this.options = [];
+		this._selectedIndex = null;
+		
+		let step = 1 / (this.optionCount - 1),
+			spreadWidth = sprSF * 1024,
+			dotHeight = sprSF * 64;
+		for (let i = 0; i < this.optionCount; i++) {
+			let stop = i * step,
+			hexAct, hexMO;
+			
+			if (stop < 0.5) {
+				let prop = stop / 0.5;
+				hexMO =	utils.linearColourInterpolation(0xff8181, 0xffef81, prop);
+				hexAct =		utils.linearColourInterpolation(0xff0000, 0xffdf00, prop);
+			}
+			else {
+				let prop = (stop - 0.5) / 0.5;
+				hexMO =	utils.linearColourInterpolation(0xffef81, 0x81ff81, prop);
+				hexAct =		utils.linearColourInterpolation(0xffdf00, 0x00bf00, prop);
+			}
+			
+			let xVal = (-0.5 + stop) * spreadWidth,
+				dotPos = new PIXI.Point(xVal, dotHeight);
+			
+			this.options.push(new radioButton(this, stop, this.sprites, hexAct, hexMO, dotPos, sprSF));
+		}
+		
+		let titleTextOpts = new defaultTextStyle(pixelScaleFactor, 'medium');
+		this.title = new PIXI.Text(this.titleString, titleTextOpts);
+		//this.title.anchor.set(0.5, 0.5);
+		xOff = Math.round(this.title.width * -0.5);
+		yOff = Math.round(this.title.height * -0.5);
+		this.title.position.set(xOff, sprSF * -96 + yOff);
+		this.sprites.addChild(this.title);
+		
+		// Hover-over text
+		if (this.explaText) {
+			this.hoverContainer = new PIXI.Container();
+			this.hoverContainer.zIndex = 30;
+			this.hoverContainer.position.set(0, sprSF * 96);
+			
+			this.sprites.addChild(this.hoverContainer);
+			this.hoverContainer.alpha = 0;
+			this.hoverContainer._fadeData = new fadeData(this.hoverContainer, 500);
+			
+			this.hoverPanel = new Sprite(menuTex['textbox_medium.png']);
+			this.hoverPanel.anchor.set(0.5, 0.5);
+			this.hoverPanel.scale.set(sprSF, sprSF);
+			this.hoverPanel.zIndex = 30;
+			this.hoverContainer.addChild(this.hoverPanel);
+			
+			let hoverTextOpts = new defaultTextStyle(pixelScaleFactor, 'vsmall', 'Roboto');
+			hoverTextOpts.wordWrap = true;
+			hoverTextOpts.wordWrapWidth = sprSF * 1024;
+			
+			this.hoverText = new PIXI.Text(this.explaText, hoverTextOpts);
+			xOff = Math.round(this.hoverText.width * -0.5);
+			yOff = Math.round(this.hoverText.height * -0.5);
+			this.hoverText.position.set(xOff, yOff);
+			this.hoverContainer.addChild(this.hoverText);
+			
+			// Setup title as trigger
+			this.title.interactive = true;
+			/*this.title.hitArea = new PIXI.Rectangle(
+				-0.5 * this.title.width,
+				-0.5 * this.title.height,
+				this.title.width,
+				this.title.height
+			);*/
+			
+			this.title._mouseOvered = false;
+			this.title._mouseOverCountdown = 1000;
+			
+			this.title.mouseover = (mouseData) => { this.title._mouseOvered = true; }
+			this.title.mouseout = (mouseData) => {
+				this.title._mouseOvered = false;
+				this.title._mouseOverCountdown = 1000;
+				this.hoverContainer._fadeData.triggered = false;
+			}
+			
+			this.title.update = (deltaMS) => {
+				if (this.title._mouseOvered && this.title._mouseOverCountdown > 0) {
+					this.title._mouseOverCountdown -= deltaMS;
+					if (this.title._mouseOverCountdown <= 0) {
+						this.title._mouseOverCountdown = 0;
+						this.hoverContainer._fadeData.triggered = true;
+					}
+				}
+			}
+		}
+	}
+	
+	wasSelected(value) {
+		let newSelectedIndex = -1;
+		for (let i = 0; i < this.options.length && newSelectedIndex == -1; i++) {
+			if (this.options[i].value == value) { newSelectedIndex = i; }
+		}
+		
+		if (this._selectedIndex != null) { this.options[this._selectedIndex].selected = false; }
+		this.options[newSelectedIndex].selected = true;
+		this._selectedIndex = newSelectedIndex;
+	}
+	
+	get value() {
+		if (this._selectedIndex == null) { return -1; }
+		else {
+			return this.options[this._selectedIndex].value;
+		}
+	}
+}
+
+let radioButton = class {
+	constructor(parent, value, parentPIXIContainer, colourHexSelect, colourHexMO, position, sprSF) {
+		this.parent = parent;
+		this.value = value;
+		
+		this.colourHexSelect = (colourHexSelect != null) ? colourHexSelect : 0x000000;
+		this.colourHexMO = (colourHexMO != null) ? colourHexMO : 0x818181;
+		position = position || new PIXI.Point(0, 0);
+		sprSF = sprSF || 1;
+		
+		this.sprite = new Sprite(menuTex['button_dot.png']);
+		this.sprite.tint = 0xffffff;
+		this.sprite.anchor.set(0.5, 0.5);
+		this.sprite.scale.set(sprSF, sprSF);
+		this.sprite.position.set(position.x, position.y);
+		this.sprite.zIndex = 15;
+		
+		parentPIXIContainer.addChild(this.sprite);
+		
+		this.sprite.interactive = true;
+		this.sprite.hitArea = new PIXI.Circle(0, 0, 64);
+		
+		this.sprite._fadeTintData = new fadeTintData(this.sprite, 500, colourHexMO);
+		
+		this.sprite.mouseover = (mouseData) => { this.sprite._fadeTintData.triggered = true; }
+		this.sprite.mouseout = (mouseData) => { this.sprite._fadeTintData.triggered = false; }
+		this.sprite.click = (mouseData) => { this.selected = true; }
+		
+		this._selected = false;
+	}
+	
+	get selected() { return this._selected; }
+	
+	set selected(flag) {
+		flag = flag !== false;
+		
+		if (flag != this._selected) {
+			if (flag) {
+				this._selected = true;
+				this.sprite._fadeTintData.active = false;
+				this.sprite.tint = this.colourHexSelect;
+				
+				this.parent.wasSelected(this.value);
+			}
+			else {
+				this._selected = false;
+				this.sprite._fadeTintData.active = true;
+				this.sprite.tint = this.colourHexMO;
+				
+				this.sprite._fadeTintData._triggered = false;
+				this.sprite._fadeTintData.counter = this.sprite._fadeTintData.fadeOutTimeMS;
+			}
+		}
+	}
+}
+
+let checkboxButton = class {
+	constructor(titleString, parentPIXIContainer, position, pixelScaleFactor, colourHexSelect, colourHexMO) {
+		this.titleString = titleString || 'default';
+		
+		if (position == null) { position = new PIXI.Point(0, 0); }
+		if (pixelScaleFactor == null) { pixelScaleFactor = 16; }
+		
+		let sprSF = (pixelScaleFactor / 64);
+		let xOff, yOff;
+		
+		this._selected = false;
+		
+		this.sprites = new PIXI.Container();
+		this.sprites.position.set(position.x, position.y);
+		
+		// Button
+		this.colourHexSelect = (colourHexSelect != null) ? colourHexSelect : 0x000000;
+		this.colourHexMO = (colourHexMO != null) ? colourHexMO : 0x818181;
+		sprSF = sprSF || 1;
+		
+		this.button = new Sprite(menuTex['button_square.png']);
+		this.button.tint = 0xffffff;
+		this.button.anchor.set(0.5, 0.5);
+		this.button.position.set(sprSF * 96, 0)
+		this.button.scale.set(sprSF, sprSF);
+		this.button.zIndex = 15;
+		
+		this.button._fadeTintData = new fadeTintData(this.button, 500, colourHexMO);
+		
+		this.sprites.addChild(this.button);
+		
+		// Text
+		let titleTextOpts = new defaultTextStyle(pixelScaleFactor, 'small', 'Roboto');
+		titleTextOpts.wordWrap = true;
+		titleTextOpts.wordWrapWidth = 512 * sprSF;
+		
+		this.title = new PIXI.Text(this.titleString, titleTextOpts);
+		yOff = Math.round(this.title.height * -0.5);
+		this.title.position.set(192 * sprSF, yOff);
+		this.title.tint = 0x000000;
+		
+		this.sprites.addChild(this.title);
+		
+		// Interaction
+		this.sprites.interactive = true;
+		
+		this.sprites.mouseover = (mouseData) => { this.button._fadeTintData.triggered = true; }
+		this.sprites.mouseout = (mouseData) => { this.button._fadeTintData.triggered = false; }
+		this.sprites.click = (mouseData) => { this.selected = !this.selected; }
+		
+		parentPIXIContainer.addChild(this.sprites);
+	}
+	
+	get selected() { return this._selected; }
+	
+	set selected(flag) {
+		flag = flag !== false;
+		
+		if (flag != this._selected) {
+			if (flag) {
+				this._selected = true;
+				this.button._fadeTintData.active = false;
+				this.button.tint = this.colourHexSelect;
+			}
+			else {
+				this._selected = false;
+				this.button._fadeTintData.active = true;
+				this.button.tint = this.colourHexMO;
+				
+				this.button._fadeTintData._triggered = false;
+				this.button._fadeTintData.counter = this.button._fadeTintData.fadeOutTimeMS;
+			}
+		}
+	}
+}
+
+menus.main = class {
 	constructor (app, settings) {
 		this.stage = new PIXI.Container();
 		this.stage.sortableChildren = true;
@@ -27361,9 +27751,18 @@ menus.make_main = class {
 		this.settings = settings;
 		this._behaviour = "";
 		this._behaviourTrigger = false;
+		this._behaviourOptions = null;
+		
+		// Background
+		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+		this.background = new PIXI.Graphics;
+		this.background.lineStyle(0, 0, 0);
+		this.background.beginFill(0xffffff, 1);
+		this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.background.zIndex = -1;
+		this.stage.addChild(this.background);
 		
 		// Blackout visual
-		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
 		this._darkTimer = 500;
 		this._blackIn = false;
 		this.darkOverlay = new PIXI.Graphics;
@@ -27444,7 +27843,7 @@ menus.make_main = class {
 		// buttons
 		let buttonHitWidth = 640 * sprSF,
 			buttonHitHeight = 128 * sprSF,
-			buttonTextStye = new defaultTextStyle(settings.pixelScaleFactor, 'large');
+			buttonTextStyle = new defaultTextStyle(settings.pixelScaleFactor, 'large');
 		
 		// Tutorial Button
 		this.sprites.but_tut = new PIXI.Container();
@@ -27472,7 +27871,7 @@ menus.make_main = class {
 		this.sprites.but_tut.dot = newSpr;
 		this.sprites.fadeables.push(newSpr);
 		
-		newSpr = new PIXI.Text('tutorial', buttonTextStye);
+		newSpr = new PIXI.Text('tutorial', buttonTextStyle);
 		newSpr.position.set(sprSF * -128, sprSF * -96);
 		
 		this.sprites.but_tut.addChild(newSpr);
@@ -27480,6 +27879,10 @@ menus.make_main = class {
 		
 		this.sprites.but_tut.mouseover = (mouseData) => { this.sprites.but_tut.dot._fadeTintData.triggered = true; }
 		this.sprites.but_tut.mouseout = (mouseData) => { this.sprites.but_tut.dot._fadeTintData.triggered = false; }
+		this.sprites.but_tut.click = (mouseData) => {
+			this._blackIn = true;
+			this._behaviour = "b_tutorial";
+		}
 		
 		// Play Button
 		this.sprites.but_play = new PIXI.Container();
@@ -27507,7 +27910,7 @@ menus.make_main = class {
 		this.sprites.but_play.dot = newSpr;
 		this.sprites.fadeables.push(newSpr);
 		
-		newSpr = new PIXI.Text('play', buttonTextStye);
+		newSpr = new PIXI.Text('play', buttonTextStyle);
 		newSpr.position.set(sprSF * -128, sprSF * -96);
 		
 		this.sprites.but_play.addChild(newSpr);
@@ -27515,6 +27918,10 @@ menus.make_main = class {
 		
 		this.sprites.but_play.mouseover = (mouseData) => { this.sprites.but_play.dot._fadeTintData.triggered = true; }
 		this.sprites.but_play.mouseout = (mouseData) => { this.sprites.but_play.dot._fadeTintData.triggered = false; }
+		this.sprites.but_play.click = (mouseData) => {
+			this._blackIn = true;
+			this._behaviour = "b_play";
+		}
 		
 		// Options Button
 		this.sprites.but_opt = new PIXI.Container();
@@ -27542,7 +27949,7 @@ menus.make_main = class {
 		this.sprites.but_opt.dot = newSpr;
 		this.sprites.fadeables.push(newSpr);
 		
-		newSpr = new PIXI.Text('options', buttonTextStye);
+		newSpr = new PIXI.Text('options', buttonTextStyle);
 		newSpr.position.set(sprSF * -128, sprSF * -96);
 		
 		this.sprites.but_opt.addChild(newSpr);
@@ -27550,6 +27957,10 @@ menus.make_main = class {
 		
 		this.sprites.but_opt.mouseover = (mouseData) => { this.sprites.but_opt.dot._fadeTintData.triggered = true; }
 		this.sprites.but_opt.mouseout = (mouseData) => { this.sprites.but_opt.dot._fadeTintData.triggered = false; }
+		this.sprites.but_opt.click = (mouseData) => {
+			this._blackIn = true;
+			this._behaviour = "b_options";
+		}
 	}
 	
 	update(deltaMS) {
@@ -27579,8 +27990,8 @@ menus.make_main = class {
 			}
 		}
 		
-		if (this._behaviourTrigger && this._behaviour != "") {
-			this[this._behaviour]();
+		if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+			this[this._behaviour](this._behaviourOptions);
 		}
 		
 		this._lightupsDeltaS += deltaS;
@@ -27597,6 +28008,792 @@ menus.make_main = class {
 			if (element._fadeData) { element._fadeData.updateFade(deltaMS); }
 			if (element._fadeTintData) { element._fadeTintData.updateFade(deltaMS); }
 		});
+	}
+	
+	destroy() {
+		this.stage.destroy({ children: true });
+	}
+}
+
+menus.options = class {
+	constructor (app, settings) {
+		this.stage = new PIXI.Container();
+		this.stage.sortableChildren = true;
+		app.stage.addChildAt(this.stage, 0);
+		this.stage.position.set(settings.pixelOffset.x, settings.pixelOffset.y);
+		
+		this.settings = settings;
+		this._behaviour = "";
+		this._behaviourTrigger = false;
+		this._behaviourOptions = null;
+		
+		// Background
+		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+		this.background = new PIXI.Graphics;
+		this.background.lineStyle(0, 0, 0);
+		this.background.beginFill(0xffffff, 1);
+		this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.background.zIndex = -1;
+		this.stage.addChild(this.background);
+		
+		// Blackout visual
+		this._darkTimer = 500;
+		this._blackIn = false;
+		this.darkOverlay = new PIXI.Graphics;
+		this.darkOverlay.lineStyle(0, 0, 0);
+		this.darkOverlay.beginFill(0x000000, 1);
+		this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.darkOverlay.visible = true;
+		this.darkOverlay.zIndex = 101;
+		this.stage.addChild(this.darkOverlay);
+		
+		// Visuals
+		this.sprites = {};
+		this.sprites.fadeables = [];
+		this.updateables = [];
+		
+		let sprSF = (settings.pixelScaleFactor / 64),
+			position,
+			newSpr; // Assume all menu sprites done at 64 pixel psf.
+		
+		// decor
+		this.sprites.decor = new Sprite(resources['assets/quiz_decor.png'].texture);
+		this.sprites.decor.scale.set(sprSF, sprSF);
+		this.sprites.decor.zIndex = 10;
+		this.stage.addChild(this.sprites.decor);
+		
+		let xOff, yOff;
+		
+		// Title
+		this.sprites.title = new PIXI.Text('options', new defaultTextStyle(settings.pixelScaleFactor, 'large'));
+		xOff = Math.round(this.sprites.title.width * -0.5),
+		yOff = Math.round(this.sprites.title.height * -0.5);
+		this.sprites.title.position.set(sprSF * 1088 + xOff, sprSF * 320 + yOff);
+		this.stage.addChild(this.sprites.title);
+		
+		// progress subtitle
+		this.sprites.subtitle = new PIXI.Text('Under construction.', new defaultTextStyle(settings.pixelScaleFactor, 'small', 'Roboto'));
+		xOff = Math.round(this.sprites.subtitle.width * -0.5),
+		yOff = Math.round(this.sprites.subtitle.height * -0.5);
+		this.sprites.subtitle.position.set(sprSF * 1088 + xOff, sprSF * 440 + yOff);
+		this.stage.addChild(this.sprites.subtitle);
+		
+		// back button
+		this.sprites.but_cont = new Sprite(menuTex['button_continue.png']);
+		this.sprites.but_cont.tint = 0xffffff;
+		this.sprites.but_cont.anchor.set(0.5, 0.5);
+		this.sprites.but_cont.scale.set(sprSF, sprSF);
+		this.sprites.but_cont.rotation = utils.PI;
+		this.sprites.but_cont.zIndex = 16;
+		this.sprites.but_cont.position.set(sprSF * 1088, sprSF * 1856);
+		this.stage.addChild(this.sprites.but_cont);
+		
+		this.sprites.but_cont.interactive = true;
+		this.sprites.but_cont.hitArea = new PIXI.Circle(0, 0, 128);
+		
+		this.sprites.but_cont._fadeTintData = new fadeTintData(this.sprites.but_cont, 500, 0x8181ff);
+		this.sprites.fadeables.push(this.sprites.but_cont);
+		
+		this.sprites.but_cont.mouseover = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = true; }
+		this.sprites.but_cont.mouseout = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = false; }
+		this.sprites.but_cont.click = (mouseData) => {
+				this._blackIn = true;
+				this._behaviour = "b_back";
+		};
+	}
+	
+	update(deltaMS) {
+		let deltaS = deltaMS * 0.001;
+		
+		if (!this._blackIn &&  this._darkTimer > 0) {
+			this._darkTimer -= deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer <= 0) {
+				this._darkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+		else if (this._blackIn &&  this._darkTimer < 500) {
+			this._darkTimer += deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer >= 500) {
+				this._darkTimer = 500;
+				// Phased out of the menu. Trigger the set behaviour.
+				this._behaviourTrigger = true;
+			}
+		}
+		
+		if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+			this[this._behaviour](this._behaviourOptions);
+		}
+		
+		// Updateables
+		this.updateables.forEach((element) => element.update(deltaMS));
+		
+		// Button fading
+		this.sprites.fadeables.forEach((element) => {
+			if (element._fadeData) { element._fadeData.updateFade(deltaMS); }
+			if (element._fadeTintData) { element._fadeTintData.updateFade(deltaMS); }
+		});
+	}
+	
+	destroy() {
+		this.stage.destroy({ children: true });
+	}
+}
+
+menus.quiz_player = class {
+	constructor (app, settings) {
+		this.stage = new PIXI.Container();
+		this.stage.sortableChildren = true;
+		app.stage.addChildAt(this.stage, 0);
+		this.stage.position.set(settings.pixelOffset.x, settings.pixelOffset.y);
+		
+		this.settings = settings;
+		this._behaviour = "";
+		this._behaviourTrigger = false;
+		this._behaviourOptions = null;
+		
+		// Background
+		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+		this.background = new PIXI.Graphics;
+		this.background.lineStyle(0, 0, 0);
+		this.background.beginFill(0xffffff, 1);
+		this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.background.zIndex = -1;
+		this.stage.addChild(this.background);
+		
+		// Blackout visual
+		this._darkTimer = 500;
+		this._blackIn = false;
+		this.darkOverlay = new PIXI.Graphics;
+		this.darkOverlay.lineStyle(0, 0, 0);
+		this.darkOverlay.beginFill(0x000000, 1);
+		this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.darkOverlay.visible = true;
+		this.darkOverlay.zIndex = 101;
+		this.stage.addChild(this.darkOverlay);
+		
+		// Visuals
+		this.sprites = {};
+		this.sprites.fadeables = [];
+		this.updateables = [];
+		
+		let sprSF = (settings.pixelScaleFactor / 64),
+			position,
+			newSpr; // Assume all menu sprites done at 64 pixel psf.
+		
+		// decor
+		this.sprites.decor = new Sprite(resources['assets/quiz_decor.png'].texture);
+		this.sprites.decor.scale.set(sprSF, sprSF);
+		this.sprites.decor.zIndex = 10;
+		this.stage.addChild(this.sprites.decor);
+		
+		// Title
+		this.sprites.title = new PIXI.Text('your priorities', new defaultTextStyle(settings.pixelScaleFactor, 'large'));
+		//this.sprites.title.anchor.set(0.5, 0.5);
+		let xOff = Math.round(this.sprites.title.width * -0.5),
+			yOff = Math.round(this.sprites.title.height * -0.5);
+		this.sprites.title.position.set(sprSF * 1088 + xOff, sprSF * 320 + yOff);
+		this.stage.addChild(this.sprites.title);
+		
+		this.questions = [];
+		
+		// interaction
+		position = new PIXI.Point(sprSF * 1088, sprSF * 704);
+		newSpr = new radioController('mechanics', this.stage, position, settings.pixelScaleFactor, 5, 'technical challenge, depth, fairness, the scope for skill');
+		this.questions.push(newSpr);
+		
+		// exploration
+		position = new PIXI.Point(sprSF * 1088, sprSF * 1088);
+		newSpr = new radioController('aesthetics', this.stage, position, settings.pixelScaleFactor, 5, 'beauty, theme, the realisation of another place');
+		this.questions.push(newSpr);
+		
+		// narrative
+		position = new PIXI.Point(sprSF * 1088, sprSF * 1472);
+		newSpr = new radioController('narrative', this.stage, position, settings.pixelScaleFactor, 5, 'meaning, empathy, direction, effective storytelling');
+		this.questions.push(newSpr);
+		
+		// next button
+		this.sprites.but_cont = new Sprite(menuTex['button_continue.png']);
+		this.sprites.but_cont.tint = 0xffffff;
+		this.sprites.but_cont.anchor.set(0.5, 0.5);
+		this.sprites.but_cont.scale.set(sprSF, sprSF);
+		this.sprites.but_cont.zIndex = 16;
+		this.sprites.but_cont.position.set(sprSF * 1088, sprSF * 1856);
+		this.stage.addChild(this.sprites.but_cont);
+		
+		this.sprites.but_cont.interactive = true;
+		this.sprites.but_cont.hitArea = new PIXI.Circle(0, 0, 128);
+		
+		this.sprites.but_cont._fadeTintData = new fadeTintData(this.sprites.but_cont, 500, 0x8181ff);
+		this.sprites.fadeables.push(this.sprites.but_cont);
+		
+		this.sprites.but_cont.mouseover = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = true; }
+		this.sprites.but_cont.mouseout = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = false; }
+		this.sprites.but_cont.click = (mouseData) => {
+			let profile = {};
+			
+			profile.interaction =	this.questions[0].value;
+			profile.exploration =	this.questions[1].value;
+			profile.narrative =	this.questions[2].value;
+			
+			if (!(profile.interaction == -1 || profile.exploration == -1 || profile.narrative == -1)) {
+				this._blackIn = true;
+				this._behaviour = "b_continue";
+				this._behaviourOptions = profile;
+			}
+		}
+		
+		this.questions.forEach((question) => {
+			question.options.forEach((option) => {
+				this.sprites.fadeables.push(option.sprite);
+			});
+			if (question.title.interactive) {
+				this.updateables.push(question.title);
+				this.sprites.fadeables.push(question.hoverContainer);
+			}
+		});
+	}
+	
+	update(deltaMS) {
+		let deltaS = deltaMS * 0.001;
+		
+		if (!this._blackIn &&  this._darkTimer > 0) {
+			this._darkTimer -= deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer <= 0) {
+				this._darkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+		else if (this._blackIn &&  this._darkTimer < 500) {
+			this._darkTimer += deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer >= 500) {
+				this._darkTimer = 500;
+				// Phased out of the menu. Trigger the set behaviour.
+				this._behaviourTrigger = true;
+			}
+		}
+		
+		if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+			this[this._behaviour](this._behaviourOptions);
+		}
+		
+		// Updateables
+		this.updateables.forEach((element) => element.update(deltaMS));
+		
+		// Button fading
+		this.sprites.fadeables.forEach((element) => {
+			if (element._fadeData) { element._fadeData.updateFade(deltaMS); }
+			if (element._fadeTintData) { element._fadeTintData.updateFade(deltaMS); }
+		});
+	}
+	
+	destroy() {
+		this.stage.destroy({ children: true });
+	}
+}
+
+menus.quiz_feedback = class {
+	constructor (app, settings, currentIndex, runTime) {
+		this.stage = new PIXI.Container();
+		this.stage.sortableChildren = true;
+		app.stage.addChildAt(this.stage, 0);
+		this.stage.position.set(settings.pixelOffset.x, settings.pixelOffset.y);
+		
+		this.settings = settings;
+		this._behaviour = "";
+		this._behaviourTrigger = false;
+		this._behaviourOptions = null;
+		
+		// Background
+		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+		this.background = new PIXI.Graphics;
+		this.background.lineStyle(0, 0, 0);
+		this.background.beginFill(0xffffff, 1);
+		this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.background.zIndex = -1;
+		this.stage.addChild(this.background);
+		
+		// Blackout visual
+		this._darkTimer = 500;
+		this._blackIn = false;
+		this.darkOverlay = new PIXI.Graphics;
+		this.darkOverlay.lineStyle(0, 0, 0);
+		this.darkOverlay.beginFill(0x000000, 1);
+		this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.darkOverlay.visible = true;
+		this.darkOverlay.zIndex = 101;
+		this.stage.addChild(this.darkOverlay);
+		
+		// Visuals
+		this.sprites = {};
+		this.sprites.fadeables = [];
+		this.updateables = [];
+		
+		let sprSF = (settings.pixelScaleFactor / 64),
+			position,
+			newSpr; // Assume all menu sprites done at 64 pixel psf.
+		
+		// decor
+		this.sprites.decor = new Sprite(resources['assets/quiz_decor.png'].texture);
+		this.sprites.decor.scale.set(sprSF, sprSF);
+		this.sprites.decor.zIndex = 10;
+		this.stage.addChild(this.sprites.decor);
+		
+		let xOff, yOff;
+		
+		// Title
+		this.sprites.title = new PIXI.Text('level feedback', new defaultTextStyle(settings.pixelScaleFactor, 'large'));
+		xOff = Math.round(this.sprites.title.width * -0.5),
+		yOff = Math.round(this.sprites.title.height * -0.5);
+		this.sprites.title.position.set(sprSF * 1088 + xOff, sprSF * 320 + yOff);
+		this.stage.addChild(this.sprites.title);
+		
+		// progress subtitle
+		currentIndex += 1;
+		let subtitleText;
+		if (runTime < 0) { subtitleText = '' + currentIndex + '/5 | skipped'; }
+		else {
+			let runTimeRounded = 0.01 * Math.round(runTime * 100);
+			subtitleText = '' + currentIndex + '/5 | ' + runTimeRounded + 's';
+		}
+		
+		this.sprites.subtitle = new PIXI.Text(subtitleText, new defaultTextStyle(settings.pixelScaleFactor, 'small', 'Roboto'));
+		xOff = Math.round(this.sprites.subtitle.width * -0.5),
+		yOff = Math.round(this.sprites.subtitle.height * -0.5);
+		this.sprites.subtitle.position.set(sprSF * 1088 + xOff, sprSF * 440 + yOff);
+		this.stage.addChild(this.sprites.subtitle);
+		
+		this.questions = [];
+		
+		// challenge
+		position = new PIXI.Point(sprSF * 1088, sprSF * 704);
+		newSpr = new radioController('challenge', this.stage, position, settings.pixelScaleFactor, 5, 'Was this level appropriately difficult?');
+		this.questions.push(newSpr);
+		
+		// engagement
+		position = new PIXI.Point(sprSF * 1088, sprSF * 1088);
+		newSpr = new radioController('engagement', this.stage, position, settings.pixelScaleFactor, 5, 'Was this level interesting to complete?');
+		this.questions.push(newSpr);
+		
+		// aesthetics
+		position = new PIXI.Point(sprSF * 1088, sprSF * 1472);
+		newSpr = new radioController('aesthetics', this.stage, position, settings.pixelScaleFactor, 5, 'Was this level aesthetically pleasing?');
+		this.questions.push(newSpr);
+		
+		// next button
+		this.sprites.but_cont = new Sprite(menuTex['button_continue.png']);
+		this.sprites.but_cont.tint = 0xffffff;
+		this.sprites.but_cont.anchor.set(0.5, 0.5);
+		this.sprites.but_cont.scale.set(sprSF, sprSF);
+		this.sprites.but_cont.zIndex = 16;
+		this.sprites.but_cont.position.set(sprSF * 1088, sprSF * 1856);
+		this.stage.addChild(this.sprites.but_cont);
+		
+		this.sprites.but_cont.interactive = true;
+		this.sprites.but_cont.hitArea = new PIXI.Circle(0, 0, 128);
+		
+		this.sprites.but_cont._fadeTintData = new fadeTintData(this.sprites.but_cont, 500, 0x8181ff);
+		this.sprites.fadeables.push(this.sprites.but_cont);
+		
+		this.sprites.but_cont.mouseover = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = true; }
+		this.sprites.but_cont.mouseout = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = false; }
+		this.sprites.but_cont.click = (mouseData) => {
+			let feedback = {};
+			
+			feedback.challenge =	this.questions[0].value;
+			feedback.engagement =	this.questions[1].value;
+			feedback.aesthetics =	this.questions[2].value;
+			
+			if (!(feedback.challenge == -1 || feedback.engagement == -1 || feedback.aesthetics == -1)) {
+				this._blackIn = true;
+				this._behaviour = "b_continue";
+				this._behaviourOptions = feedback;
+			}
+		}
+		
+		this.questions.forEach((question) => {
+			question.options.forEach((option) => {
+				this.sprites.fadeables.push(option.sprite);
+			});
+			if (question.title.interactive) {
+				this.updateables.push(question.title);
+				this.sprites.fadeables.push(question.hoverContainer);
+			}
+		});
+	}
+	
+	update(deltaMS) {
+		let deltaS = deltaMS * 0.001;
+		
+		if (!this._blackIn &&  this._darkTimer > 0) {
+			this._darkTimer -= deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer <= 0) {
+				this._darkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+		else if (this._blackIn &&  this._darkTimer < 500) {
+			this._darkTimer += deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer >= 500) {
+				this._darkTimer = 500;
+				// Phased out of the menu. Trigger the set behaviour.
+				this._behaviourTrigger = true;
+			}
+		}
+		
+		if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+			this[this._behaviour](this._behaviourOptions);
+		}
+		
+		// Updateables
+		this.updateables.forEach((element) => element.update(deltaMS));
+		
+		// Button fading
+		this.sprites.fadeables.forEach((element) => {
+			if (element._fadeData) { element._fadeData.updateFade(deltaMS); }
+			if (element._fadeTintData) { element._fadeTintData.updateFade(deltaMS); }
+		});
+	}
+	
+	destroy() {
+		this.stage.destroy({ children: true });
+	}
+}
+
+menus.quiz_skip = class {
+	constructor (app, settings, currentIndex, runTime) {
+		this.stage = new PIXI.Container();
+		this.stage.sortableChildren = true;
+		app.stage.addChildAt(this.stage, 0);
+		this.stage.position.set(settings.pixelOffset.x, settings.pixelOffset.y);
+		
+		this.settings = settings;
+		this._behaviour = "";
+		this._behaviourTrigger = false;
+		this._behaviourOptions = null;
+		
+		// Background
+		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+		this.background = new PIXI.Graphics;
+		this.background.lineStyle(0, 0, 0);
+		this.background.beginFill(0xffffff, 1);
+		this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.background.zIndex = -1;
+		this.stage.addChild(this.background);
+		
+		// Blackout visual
+		this._darkTimer = 500;
+		this._blackIn = false;
+		this.darkOverlay = new PIXI.Graphics;
+		this.darkOverlay.lineStyle(0, 0, 0);
+		this.darkOverlay.beginFill(0x000000, 1);
+		this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.darkOverlay.visible = true;
+		this.darkOverlay.zIndex = 101;
+		this.stage.addChild(this.darkOverlay);
+		
+		// Visuals
+		this.sprites = {};
+		this.sprites.fadeables = [];
+		this.updateables = [];
+		
+		let sprSF = (settings.pixelScaleFactor / 64),
+			position,
+			newSpr; // Assume all menu sprites done at 64 pixel psf.
+		
+		// decor
+		this.sprites.decor = new Sprite(resources['assets/quiz_decor.png'].texture);
+		this.sprites.decor.scale.set(sprSF, sprSF);
+		this.sprites.decor.zIndex = 10;
+		this.stage.addChild(this.sprites.decor);
+		
+		let xOff, yOff;
+		
+		// Title
+		this.sprites.title = new PIXI.Text('level skipped', new defaultTextStyle(settings.pixelScaleFactor, 'large'));
+		xOff = Math.round(this.sprites.title.width * -0.5),
+		yOff = Math.round(this.sprites.title.height * -0.5);
+		this.sprites.title.position.set(sprSF * 1088 + xOff, sprSF * 320 + yOff);
+		this.stage.addChild(this.sprites.title);
+		
+		// progress subtitle
+		currentIndex += 1;
+		
+		this.sprites.subtitle = new PIXI.Text('What were your reasons?', new defaultTextStyle(settings.pixelScaleFactor, 'small', 'Roboto'));
+		xOff = Math.round(this.sprites.subtitle.width * -0.5),
+		yOff = Math.round(this.sprites.subtitle.height * -0.5);
+		this.sprites.subtitle.position.set(sprSF * 1088 + xOff, sprSF * 440 + yOff);
+		this.stage.addChild(this.sprites.subtitle);
+		
+		this.questions = [];
+		
+		// Too hard?
+		position = new PIXI.Point(sprSF * 320, sprSF * 704);
+		newSpr = new checkboxButton('Too Difficult for Me', this.stage, position, settings.pixelScaleFactor, 0xffdf00, 0xffef81);
+		this.questions.push(newSpr);
+		
+		// not fun
+		position = new PIXI.Point(sprSF * 1088, sprSF * 704);
+		newSpr = new checkboxButton('Not Enjoyable', this.stage, position, settings.pixelScaleFactor, 0xffdf00, 0xffef81);
+		this.questions.push(newSpr);
+		
+		// accidental misclick
+		position = new PIXI.Point(sprSF * 320, sprSF * 1088);
+		newSpr = new checkboxButton('Accidental Misclick', this.stage, position, settings.pixelScaleFactor, 0x0000ff, 0x8181ff);
+		this.questions.push(newSpr);
+		
+		// Literally Impossible
+		position = new PIXI.Point(sprSF * 1088, sprSF * 1088);
+		newSpr = new checkboxButton('Impossible to Complete', this.stage, position, settings.pixelScaleFactor, 0xff0000, 0xff8181);
+		this.questions.push(newSpr);
+		
+		// Offensive?
+		position = new PIXI.Point(sprSF * 320, sprSF * 1472);
+		newSpr = new checkboxButton('Offensive Content', this.stage, position, settings.pixelScaleFactor, 0xff0000, 0xff8181);
+		this.questions.push(newSpr);
+		
+		// Other
+		position = new PIXI.Point(sprSF * 1088, sprSF * 1472);
+		newSpr = new checkboxButton('Other', this.stage, position, settings.pixelScaleFactor, 0x0000ff, 0x8181ff);
+		this.questions.push(newSpr);
+		
+		// next button
+		this.sprites.but_cont = new Sprite(menuTex['button_continue.png']);
+		this.sprites.but_cont.tint = 0xffffff;
+		this.sprites.but_cont.anchor.set(0.5, 0.5);
+		this.sprites.but_cont.scale.set(sprSF, sprSF);
+		this.sprites.but_cont.zIndex = 16;
+		this.sprites.but_cont.position.set(sprSF * 1088, sprSF * 1856);
+		this.stage.addChild(this.sprites.but_cont);
+		
+		this.sprites.but_cont.interactive = true;
+		this.sprites.but_cont.hitArea = new PIXI.Circle(0, 0, 128);
+		
+		this.sprites.but_cont._fadeTintData = new fadeTintData(this.sprites.but_cont, 500, 0x8181ff);
+		this.sprites.fadeables.push(this.sprites.but_cont);
+		
+		this.sprites.but_cont.mouseover = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = true; }
+		this.sprites.but_cont.mouseout = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = false; }
+		this.sprites.but_cont.click = (mouseData) => {
+			let bits = 0x00;
+			
+			for (let i = 0; i < this.questions.length; i++) {
+				let bit = this.questions[i].selected ? 1 : 0;
+				bit = bit << i;
+				bits = bits | bit;
+			}
+			
+			if (bits != 0) {
+				this._blackIn = true;
+				this._behaviour = "b_continue";
+				this._behaviourOptions = bits;
+			}
+		}
+		
+		this.questions.forEach((question) => {
+			this.sprites.fadeables.push(question.button);
+		});
+	}
+	
+	update(deltaMS) {
+		let deltaS = deltaMS * 0.001;
+		
+		if (!this._blackIn &&  this._darkTimer > 0) {
+			this._darkTimer -= deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer <= 0) {
+				this._darkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+		else if (this._blackIn &&  this._darkTimer < 500) {
+			this._darkTimer += deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer >= 500) {
+				this._darkTimer = 500;
+				// Phased out of the menu. Trigger the set behaviour.
+				this._behaviourTrigger = true;
+			}
+		}
+		
+		if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+			this[this._behaviour](this._behaviourOptions);
+		}
+		
+		// Updateables
+		this.updateables.forEach((element) => element.update(deltaMS));
+		
+		// Button fading
+		this.sprites.fadeables.forEach((element) => {
+			if (element._fadeData) { element._fadeData.updateFade(deltaMS); }
+			if (element._fadeTintData) { element._fadeTintData.updateFade(deltaMS); }
+		});
+	}
+	
+	destroy() {
+		this.stage.destroy({ children: true });
+	}
+}
+
+menus.editor_standin = class {
+	constructor (app, settings) {
+		this.stage = new PIXI.Container();
+		this.stage.sortableChildren = true;
+		app.stage.addChildAt(this.stage, 0);
+		this.stage.position.set(settings.pixelOffset.x, settings.pixelOffset.y);
+		
+		this.settings = settings;
+		this._behaviour = "";
+		this._behaviourTrigger = false;
+		this._behaviourOptions = null;
+		
+		// Background
+		let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+		this.background = new PIXI.Graphics;
+		this.background.lineStyle(0, 0, 0);
+		this.background.beginFill(0xffffff, 1);
+		this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.background.zIndex = -1;
+		this.stage.addChild(this.background);
+		
+		// Blackout visual
+		this._darkTimer = 500;
+		this._blackIn = false;
+		this.darkOverlay = new PIXI.Graphics;
+		this.darkOverlay.lineStyle(0, 0, 0);
+		this.darkOverlay.beginFill(0x000000, 1);
+		this.darkOverlay.drawRect(0, 0, totalSize.x, totalSize.y);
+		this.darkOverlay.visible = true;
+		this.darkOverlay.zIndex = 101;
+		this.stage.addChild(this.darkOverlay);
+		
+		// Visuals
+		this.sprites = {};
+		this.sprites.fadeables = [];
+		this.updateables = [];
+		
+		let sprSF = (settings.pixelScaleFactor / 64),
+			position,
+			newSpr; // Assume all menu sprites done at 64 pixel psf.
+		
+		// decor
+		this.sprites.decor = new Sprite(resources['assets/quiz_decor.png'].texture);
+		this.sprites.decor.scale.set(sprSF, sprSF);
+		this.sprites.decor.zIndex = 10;
+		this.stage.addChild(this.sprites.decor);
+		
+		let xOff, yOff;
+		
+		// Title
+		this.sprites.title = new PIXI.Text('level editor', new defaultTextStyle(settings.pixelScaleFactor, 'large'));
+		xOff = Math.round(this.sprites.title.width * -0.5),
+		yOff = Math.round(this.sprites.title.height * -0.5);
+		this.sprites.title.position.set(sprSF * 1088 + xOff, sprSF * 320 + yOff);
+		this.stage.addChild(this.sprites.title);
+		
+		// progress subtitle
+		this.sprites.subtitle = new PIXI.Text('This is where it would go.', new defaultTextStyle(settings.pixelScaleFactor, 'small', 'Roboto'));
+		xOff = Math.round(this.sprites.subtitle.width * -0.5),
+		yOff = Math.round(this.sprites.subtitle.height * -0.5);
+		this.sprites.subtitle.position.set(sprSF * 1088 + xOff, sprSF * 440 + yOff);
+		this.stage.addChild(this.sprites.subtitle);
+		
+		// next button
+		this.sprites.but_cont = new Sprite(menuTex['button_continue.png']);
+		this.sprites.but_cont.tint = 0xffffff;
+		this.sprites.but_cont.anchor.set(0.5, 0.5);
+		this.sprites.but_cont.scale.set(sprSF, sprSF);
+		this.sprites.but_cont.zIndex = 16;
+		this.sprites.but_cont.position.set(sprSF * 1088, sprSF * 1856);
+		this.stage.addChild(this.sprites.but_cont);
+		
+		this.sprites.but_cont.interactive = true;
+		this.sprites.but_cont.hitArea = new PIXI.Circle(0, 0, 128);
+		
+		this.sprites.but_cont._fadeTintData = new fadeTintData(this.sprites.but_cont, 500, 0x8181ff);
+		this.sprites.fadeables.push(this.sprites.but_cont);
+		
+		this.sprites.but_cont.mouseover = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = true; }
+		this.sprites.but_cont.mouseout = (mouseData) => { this.sprites.but_cont._fadeTintData.triggered = false; }
+		this.sprites.but_cont.click = (mouseData) => {
+				this._blackIn = true;
+				this._behaviour = "b_continue";
+		};
+	}
+	
+	update(deltaMS) {
+		let deltaS = deltaMS * 0.001;
+		
+		if (!this._blackIn &&  this._darkTimer > 0) {
+			this._darkTimer -= deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer <= 0) {
+				this._darkTimer = 0;
+				this.darkOverlay.visible = false;
+			}
+		}
+		else if (this._blackIn &&  this._darkTimer < 500) {
+			this._darkTimer += deltaMS;
+			
+			this.darkOverlay.visible = true;
+			this.darkOverlay.alpha = this._darkTimer / 500;
+			
+			if (this._darkTimer >= 500) {
+				this._darkTimer = 500;
+				// Phased out of the menu. Trigger the set behaviour.
+				this._behaviourTrigger = true;
+			}
+		}
+		
+		if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+			this[this._behaviour](this._behaviourOptions);
+		}
+		
+		// Updateables
+		this.updateables.forEach((element) => element.update(deltaMS));
+		
+		// Button fading
+		this.sprites.fadeables.forEach((element) => {
+			if (element._fadeData) { element._fadeData.updateFade(deltaMS); }
+			if (element._fadeTintData) { element._fadeTintData.updateFade(deltaMS); }
+		});
+	}
+	
+	destroy() {
+		this.stage.destroy({ children: true });
 	}
 }
 
@@ -27626,7 +28823,7 @@ let Sprite = PIXI.Sprite,
 	Vec2 = planck.Vec2,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures;
 
-function Gameplay(world, app, IH, settings) {
+function Gameplay(app, IH, settings, runData) {
 	this.settings = (settings != null) ? settings : {
 		autoReload: true,
 		autoSlowAim: true,
@@ -27639,19 +28836,22 @@ function Gameplay(world, app, IH, settings) {
 		pixelOrigin:		Vec2(0, 34),	// In GU. PIXI's origin is in the top left of the screen, this is the location of that point in gameplay space.
 		meterOrigin:		Vec2(0, 0)		// In GU. box2D's origin is in the bottom left of the level, this is the location of that point in gameplay space.
 	}
+	this.runData = runData;
 	
 	// Handler functions
+	this._behaviour = null; // Holds state for activating handler functions.
+	this._behaviourTrigger = false;
 	this.trigger_end_victory	= null;
 	this.trigger_end_defeat		= null;
 	
 	this._gameEnded = false;
 	this._afterEndTime = 0;
-	this._endVictory = false;
+	this._endState = 0;
 	this.trigger_player_death = (playerPosGU) => {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
 			this._afterEndTime = 1500;
-			this._endVictory = false;
+			this._endState = 0;
 			
 			visuals.player_death(this, playerPosGU.clone());
 		}
@@ -27660,16 +28860,41 @@ function Gameplay(world, app, IH, settings) {
 		if (!this._gameEnded) {
 			this._gameEnded = true;
 			this._afterEndTime = 3500;
-			this._endVictory = true;
+			this._endState = 1;
 			
 			this.getObjectsOfType("player")[0].destroy(false);
 			visuals.player_ascension(this, goal.position);
 		}
 	}
+	this.trigger_player_pressed_skip = () => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 1500;
+			this._endState = 2;
+			
+			let player = this.getObjectsOfType("player")[0];
+			
+			visuals.player_death(this, player.position);
+			player.destroy(false);
+		}
+	}
+	this.trigger_player_pressed_restart = () => {
+		if (!this._gameEnded) {
+			this._gameEnded = true;
+			this._afterEndTime = 1500;
+			this._endState = 0;
+			
+			let player = this.getObjectsOfType("player")[0];
+			
+			visuals.player_death(this, player.position);
+			player.destroy(false);
+		}
+	}
 	
 	// Box2D world.	
-	console.assert(world != null, 'ERROR: Gameplay object created with null world!'); 
-	this.world = world;
+	this.world = planck.World({
+		gravity: Vec2(0, -10)
+	});
 
 	// Pixi.js application.
 	console.assert(app != null, 'ERROR: Gameplay object created with null PIXI app!'); 
@@ -27705,8 +28930,16 @@ function Gameplay(world, app, IH, settings) {
 	this.particleStageUpper.zIndex = 50;
 	this.stage.addChild(this.particleStageUpper);
 	
-	// Slowdown visual
+	// Background
 	let totalSize = this.settings.levelSize.clone().mul(this.settings.pixelScaleFactor);
+	this.background = new PIXI.Graphics;
+	this.background.lineStyle(0, 0, 0);
+	this.background.beginFill(0xffffff, 1);
+	this.background.drawRect(0, 0, totalSize.x, totalSize.y);
+	this.background.zIndex = -1;
+	this.stage.addChild(this.background);
+	
+	// Slowdown visual
 	this.slowOverlay = new PIXI.Graphics;
 	this.slowOverlay.lineStyle(0, 0, 0);
 	this.slowOverlay.beginFill(0xd9e2ff, 1);
@@ -27741,7 +28974,10 @@ function Gameplay(world, app, IH, settings) {
 	
 	this.objClasses = {};
 	
-	world.on('pre-solve', (contact) => {
+	// Stats
+	this.runTimeS = 0;
+	
+	this.world.on('pre-solve', (contact) => {
 		// Admin / Setup:
 		
 		let fixtureA = contact.getFixtureA();
@@ -27798,7 +29034,7 @@ function Gameplay(world, app, IH, settings) {
 		}
 	});
 	
-	world.on('begin-contact', (contact) => {
+	this.world.on('begin-contact', (contact) => {
 		// Admin / Setup:
 		
 		let fixtureA = contact.getFixtureA();
@@ -27930,7 +29166,7 @@ function Gameplay(world, app, IH, settings) {
 		}
 	});
 	
-	world.on('post-solve', (contact, impulse) => {
+	this.world.on('post-solve', (contact, impulse) => {
 		// Admin / Setup:
 		
 		let totalNormalImpulse = 0;
@@ -28062,6 +29298,9 @@ Gameplay.prototype.loadLevel = function(level) {
 		return false;
 	}
 	
+	let restartButton = false,
+		skipButton = false;
+	
 	for (let i = 0; i < 34; i++) {	// x
 		for (let j = 0; j < 34; j++) {	// y
 			let index = ((j * 34) + i) * 4;
@@ -28074,10 +29313,17 @@ Gameplay.prototype.loadLevel = function(level) {
 					else {
 						this.makeObject(type, null, Vec2(i + 0.5, (34 - j) - 0.5), null, null, pixels[offsetIndex], pixels[offsetIndex + 1]);
 					}
-				} 
+				}
+				
+				if (typeID == 22) { skipButton = true; }
+				if (typeID == 23) { restartButton = true; }
 			}
 		}
 	}
+	
+	// UI
+	if (!restartButton) { this.makeObject('ui_restart', null, Vec2(32.5, 33.5), 0); }
+	if (!skipButton) { this.makeObject('ui_timer_skip', null, Vec2(33.5, 33.5), 0); }
 	
 	// Kill-borders.
 	for (let x = 0; x < 35; x++) {
@@ -28682,8 +29928,27 @@ Gameplay.prototype.update = function(deltaMS) {
 		}
 		
 		if (this._afterEndTime < 0) {
-			if (this._endVictory) { this.trigger_end_victory(); }
-			else { this.trigger_end_defeat(); }
+			if (this._endState == 1) {
+				this._behaviourTrigger = true;
+				this._behaviour = "trigger_end_victory";
+				this._behaviourOptions = {
+					runTime: this.runTimeS
+				};
+			}
+			else if (this._endState == 2) {
+				this._behaviourTrigger = true;
+				this._behaviour = "trigger_end_skip";
+				this._behaviourOptions = {
+					runTime: this.runTimeS
+				};
+			}
+			else {
+				this._behaviourTrigger = true;
+				this._behaviour = "trigger_end_defeat";
+				this._behaviourOptions = {
+					runTime: this.runTimeS
+				};
+			}
 		}
 	}
 	else {
@@ -28696,6 +29961,9 @@ Gameplay.prototype.update = function(deltaMS) {
 			}
 		}
 	}
+	
+	// Update runTimeS
+	if (this.runTimeS < 300) { this.runTimeS += deltaMS * 0.001; }
 	
 	// Update cursor stage position
 	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
@@ -28767,6 +30035,10 @@ Gameplay.prototype.update = function(deltaMS) {
 	this.IH.update(deltaMS);
 	
 	this.cleanup();
+	
+	if (this._behaviourTrigger && this._behaviour != "" && this[this._behaviour] != null) {
+		this[this._behaviour](this._behaviourOptions);
+	}
 }
 
 Gameplay.prototype.cleanup = function() {
@@ -28796,6 +30068,12 @@ Gameplay.prototype.cleanup = function() {
 	}, this);
 	
 	this._markedForDeathVisuals.length = 0;
+}
+
+Gameplay.prototype.destroy = function() {
+	this.stage.destroy({ children: true });
+	this.cursorStage.destroy({ children: true });
+	delete this.world;
 }
 
 module.exports = Gameplay;
@@ -40108,6 +41386,106 @@ prefabs.mixins['enemy_charger_prow'] = (superclass) => class extends superclass 
 	}
 }
 
+//	***
+//	UI
+//	***
+
+prefabs.mixins['ui_timer_skip'] = (superclass) => class extends superclass {
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._charge = 0;
+		this._cooloffCooldown = 0;
+		
+		this.sprites.main = this.sprites.children[0];
+		this.sprites.main.interactive = true;
+		
+		this.sprites.main.mouseover = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xff8181; }
+		};
+		this.sprites.main.mouseout = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xffffff; }
+		};
+		this.sprites.main.click = (mouseData) => {
+			this._charge += 600;
+			this._cooloffCooldown = 1000;
+		};
+	}
+	
+	update(deltaMS) {
+		if (super.update) super.update(deltaMS);
+		
+		if (this._charge > 1000) {
+			this.GP.trigger_player_pressed_skip();
+			this.sprites.main.tint = 0xff0000;
+			this._cooloffCooldown = 30000;
+		}
+		else {
+			if (this._cooloffCooldown > 0) {
+				this._cooloffCooldown -= deltaMS;
+				if (this._cooloffCooldown <= 0) { this._cooloffCooldown = 0; }
+			}
+			else if (this._charge > 0 ) {
+				this._charge -= deltaMS;
+				if (this._charge <= 0) {
+					this._charge = 0;
+					this.sprites.main.tint = 0xffffff;
+				}
+			}
+			
+			if (this._charge > 0) { this.sprites.main.tint = utils.linearColourInterpolation(0xffffff, 0xff0000, (this._charge * 0.001)); }
+		}
+	}
+}
+
+prefabs.mixins['ui_restart'] = (superclass) => class extends superclass {
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._charge = 0;
+		this._cooloffCooldown = 0;
+		
+		this.sprites.main = this.sprites.children[0];
+		this.sprites.main.interactive = true;
+		
+		this.sprites.main.mouseover = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xff8181; }
+		};
+		this.sprites.main.mouseout = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xffffff; }
+		};
+		this.sprites.main.click = (mouseData) => {
+			this._charge += 600;
+			this._cooloffCooldown = 1000;
+		};
+	}
+	
+	update(deltaMS) {
+		if (super.update) super.update(deltaMS);
+		
+		if (this._charge > 1000) {
+			this.GP.trigger_player_pressed_restart();
+			this.sprites.main.tint = 0xff0000;
+			this._cooloffCooldown = 30000;
+		}
+		else {
+			if (this._cooloffCooldown > 0) {
+				this._cooloffCooldown -= deltaMS;
+				if (this._cooloffCooldown <= 0) { this._cooloffCooldown = 0; }
+			}
+			else if (this._charge > 0 ) {
+				this._charge -= deltaMS;
+				if (this._charge <= 0) {
+					this._charge = 0;
+					this.sprites.main.tint = 0xffffff;
+				}
+			}
+			
+			if (this._charge > 0) { this.sprites.main.tint = utils.linearColourInterpolation(0xffffff, 0xff0000, (this._charge * 0.001)); }
+		}
+	}
+}
+
 //	_______________________________________________________
 
 //	***
@@ -41472,6 +42850,50 @@ prefabs.symbol_display = {
 	mixins: [ 'loading_90rot', 'symbol_display' ]
 };
 
+prefabs.ui_timer_skip = {
+	name: "ui_timer_skip",
+	tags: ['static'],
+	maxCount: 1,
+	zIndex: 99,
+	sprites: [
+		{
+			tex: "ui_skip.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'
+	},
+	fixtures: [],
+	mixins: [ 'ui_timer_skip' ]
+};
+
+prefabs.ui_restart = {
+	name: "ui_restart",
+	tags: ['static'],
+	maxCount: 1,
+	zIndex: 99,
+	sprites: [
+		{
+			tex: "ui_restart.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'
+	},
+	fixtures: [],
+	mixins: [ 'ui_restart' ]
+};
+
 //	***
 //	Level creation / reading
 //	***
@@ -41505,8 +42927,12 @@ prefabs.map = {
 	
 	//	Powerups
 	20:	'player_unlock',
-	21:	'player_ammo'
+	21:	'player_ammo',
 	//22:	'player_powerup'
+	
+	//	UI
+	22:	'ui_timer_skip',
+	23:	'ui_restart'	
 }
 
 module.exports = prefabs;

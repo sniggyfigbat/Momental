@@ -1,5 +1,13 @@
 {"frames": {
 
+"button_continue.png":
+{
+	"frame": {"x":517,"y":581,"w":256,"h":256},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":256,"h":256},
+	"sourceSize": {"w":256,"h":256}
+},
 "button_dot.png":
 {
 	"frame": {"x":1795,"y":1,"w":128,"h":128},
@@ -10,15 +18,23 @@
 },
 "button_large.png":
 {
-	"frame": {"x":1,"y":581,"w":1088,"h":192},
+	"frame": {"x":775,"y":775,"w":1088,"h":192},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":1088,"h":192},
 	"sourceSize": {"w":1088,"h":192}
 },
+"button_square.png":
+{
+	"frame": {"x":1795,"y":131,"w":128,"h":128},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
+	"sourceSize": {"w":128,"h":128}
+},
 "logo_medium.png":
 {
-	"frame": {"x":1,"y":323,"w":1280,"h":256},
+	"frame": {"x":517,"y":323,"w":1280,"h":256},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":1280,"h":256},
@@ -34,19 +50,27 @@
 },
 "main_lightup2.png":
 {
-	"frame": {"x":1091,"y":709,"w":128,"h":640},
-	"rotated": true,
+	"frame": {"x":387,"y":323,"w":128,"h":640},
+	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":640},
 	"sourceSize": {"w":128,"h":640}
 },
 "main_lightup3.png":
 {
-	"frame": {"x":1283,"y":323,"w":640,"h":384},
-	"rotated": false,
+	"frame": {"x":1,"y":323,"w":640,"h":384},
+	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":640,"h":384},
 	"sourceSize": {"w":640,"h":384}
+},
+"textbox_medium.png":
+{
+	"frame": {"x":775,"y":581,"w":1152,"h":192},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":1152,"h":192},
+	"sourceSize": {"w":1152,"h":192}
 }},
 "animations": {
 	"main_lightup": ["main_lightup1.png","main_lightup2.png","main_lightup3.png"]
@@ -56,8 +80,8 @@
 	"version": "1.0",
 	"image": "menu.png",
 	"format": "RGBA8888",
-	"size": {"w":1924,"h":838},
+	"size": {"w":1928,"h":968},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:1a0e0164cfb98c8513ae29e65d35b030:af48711788b6447d1a9aa5136f0e6c42:e1b68abd82547da08a80c89591506971$"
+	"smartupdate": "$TexturePacker:SmartUpdate:33678b2a7d9238e6940f21f47f9fba68:2b9cfd28fdb61252e787b1b15bd20988:e1b68abd82547da08a80c89591506971$"
 }
 }

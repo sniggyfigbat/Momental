@@ -3507,6 +3507,106 @@ prefabs.mixins['enemy_charger_prow'] = (superclass) => class extends superclass 
 	}
 }
 
+//	***
+//	UI
+//	***
+
+prefabs.mixins['ui_timer_skip'] = (superclass) => class extends superclass {
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._charge = 0;
+		this._cooloffCooldown = 0;
+		
+		this.sprites.main = this.sprites.children[0];
+		this.sprites.main.interactive = true;
+		
+		this.sprites.main.mouseover = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xff8181; }
+		};
+		this.sprites.main.mouseout = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xffffff; }
+		};
+		this.sprites.main.click = (mouseData) => {
+			this._charge += 600;
+			this._cooloffCooldown = 1000;
+		};
+	}
+	
+	update(deltaMS) {
+		if (super.update) super.update(deltaMS);
+		
+		if (this._charge > 1000) {
+			this.GP.trigger_player_pressed_skip();
+			this.sprites.main.tint = 0xff0000;
+			this._cooloffCooldown = 30000;
+		}
+		else {
+			if (this._cooloffCooldown > 0) {
+				this._cooloffCooldown -= deltaMS;
+				if (this._cooloffCooldown <= 0) { this._cooloffCooldown = 0; }
+			}
+			else if (this._charge > 0 ) {
+				this._charge -= deltaMS;
+				if (this._charge <= 0) {
+					this._charge = 0;
+					this.sprites.main.tint = 0xffffff;
+				}
+			}
+			
+			if (this._charge > 0) { this.sprites.main.tint = utils.linearColourInterpolation(0xffffff, 0xff0000, (this._charge * 0.001)); }
+		}
+	}
+}
+
+prefabs.mixins['ui_restart'] = (superclass) => class extends superclass {
+	setup(options) {
+		if (super.setup) super.setup(options);
+		
+		this._charge = 0;
+		this._cooloffCooldown = 0;
+		
+		this.sprites.main = this.sprites.children[0];
+		this.sprites.main.interactive = true;
+		
+		this.sprites.main.mouseover = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xff8181; }
+		};
+		this.sprites.main.mouseout = (mouseData) => {
+			if (this._charge == 0) { this.sprites.main.tint = 0xffffff; }
+		};
+		this.sprites.main.click = (mouseData) => {
+			this._charge += 600;
+			this._cooloffCooldown = 1000;
+		};
+	}
+	
+	update(deltaMS) {
+		if (super.update) super.update(deltaMS);
+		
+		if (this._charge > 1000) {
+			this.GP.trigger_player_pressed_restart();
+			this.sprites.main.tint = 0xff0000;
+			this._cooloffCooldown = 30000;
+		}
+		else {
+			if (this._cooloffCooldown > 0) {
+				this._cooloffCooldown -= deltaMS;
+				if (this._cooloffCooldown <= 0) { this._cooloffCooldown = 0; }
+			}
+			else if (this._charge > 0 ) {
+				this._charge -= deltaMS;
+				if (this._charge <= 0) {
+					this._charge = 0;
+					this.sprites.main.tint = 0xffffff;
+				}
+			}
+			
+			if (this._charge > 0) { this.sprites.main.tint = utils.linearColourInterpolation(0xffffff, 0xff0000, (this._charge * 0.001)); }
+		}
+	}
+}
+
 //	_______________________________________________________
 
 //	***
@@ -4871,6 +4971,50 @@ prefabs.symbol_display = {
 	mixins: [ 'loading_90rot', 'symbol_display' ]
 };
 
+prefabs.ui_timer_skip = {
+	name: "ui_timer_skip",
+	tags: ['static'],
+	maxCount: 1,
+	zIndex: 99,
+	sprites: [
+		{
+			tex: "ui_skip.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'
+	},
+	fixtures: [],
+	mixins: [ 'ui_timer_skip' ]
+};
+
+prefabs.ui_restart = {
+	name: "ui_restart",
+	tags: ['static'],
+	maxCount: 1,
+	zIndex: 99,
+	sprites: [
+		{
+			tex: "ui_restart.png",
+			tint: 0xffffff,
+			anchor: Vec2(0.5, 0.5),
+			scale: Vec2(1, 1),
+			pos: Vec2(0, 0),
+			rot: 0
+		}
+	],
+	body: {
+		type: 'static'
+	},
+	fixtures: [],
+	mixins: [ 'ui_restart' ]
+};
+
 //	***
 //	Level creation / reading
 //	***
@@ -4904,8 +5048,12 @@ prefabs.map = {
 	
 	//	Powerups
 	20:	'player_unlock',
-	21:	'player_ammo'
+	21:	'player_ammo',
 	//22:	'player_powerup'
+	
+	//	UI
+	22:	'ui_timer_skip',
+	23:	'ui_restart'	
 }
 
 module.exports = prefabs;

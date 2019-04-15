@@ -10,7 +10,7 @@
 },
 "circle_side.png":
 {
-	"frame": {"x":131,"y":261,"w":128,"h":128},
+	"frame": {"x":261,"y":261,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -18,7 +18,7 @@
 },
 "door_key.png":
 {
-	"frame": {"x":433,"y":1,"w":64,"h":64},
+	"frame": {"x":697,"y":1,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -26,7 +26,7 @@
 },
 "door_wall.png":
 {
-	"frame": {"x":367,"y":1,"w":64,"h":64},
+	"frame": {"x":565,"y":1,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -34,7 +34,7 @@
 },
 "enemy_charger_base.png":
 {
-	"frame": {"x":499,"y":1,"w":64,"h":96},
+	"frame": {"x":631,"y":1,"w":64,"h":96},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":96},
@@ -42,7 +42,7 @@
 },
 "enemy_flier_base.png":
 {
-	"frame": {"x":565,"y":1,"w":64,"h":64},
+	"frame": {"x":499,"y":1,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -50,7 +50,7 @@
 },
 "enemy_symbol_arrow.png":
 {
-	"frame": {"x":35,"y":1,"w":32,"h":32},
+	"frame": {"x":69,"y":1,"w":32,"h":32},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
@@ -58,7 +58,7 @@
 },
 "enemy_symbol_exclamation.png":
 {
-	"frame": {"x":69,"y":1,"w":32,"h":32},
+	"frame": {"x":1,"y":1,"w":32,"h":32},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
@@ -66,7 +66,7 @@
 },
 "enemy_symbol_stop.png":
 {
-	"frame": {"x":1,"y":1,"w":32,"h":32},
+	"frame": {"x":35,"y":1,"w":32,"h":32},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
@@ -74,7 +74,7 @@
 },
 "player_body.png":
 {
-	"frame": {"x":235,"y":1,"w":64,"h":64},
+	"frame": {"x":169,"y":1,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -82,7 +82,7 @@
 },
 "player_weapon.png":
 {
-	"frame": {"x":261,"y":261,"w":128,"h":64},
+	"frame": {"x":391,"y":261,"w":128,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":64},
@@ -90,7 +90,7 @@
 },
 "pull_bobble.png":
 {
-	"frame": {"x":169,"y":1,"w":64,"h":64},
+	"frame": {"x":103,"y":1,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -106,7 +106,7 @@
 },
 "spawner_walker.png":
 {
-	"frame": {"x":103,"y":1,"w":64,"h":64},
+	"frame": {"x":235,"y":1,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -114,7 +114,7 @@
 },
 "symbol_a.png":
 {
-	"frame": {"x":391,"y":261,"w":128,"h":128},
+	"frame": {"x":131,"y":261,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -122,7 +122,7 @@
 },
 "symbol_arrow.png":
 {
-	"frame": {"x":651,"y":261,"w":128,"h":128},
+	"frame": {"x":1,"y":261,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -130,7 +130,7 @@
 },
 "symbol_cross.png":
 {
-	"frame": {"x":1,"y":261,"w":128,"h":128},
+	"frame": {"x":1,"y":391,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -138,7 +138,7 @@
 },
 "symbol_d.png":
 {
-	"frame": {"x":781,"y":261,"w":128,"h":128},
+	"frame": {"x":781,"y":131,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -146,7 +146,7 @@
 },
 "symbol_dot_centre.png":
 {
-	"frame": {"x":1,"y":391,"w":128,"h":128},
+	"frame": {"x":781,"y":261,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -154,7 +154,7 @@
 },
 "symbol_dot_outer.png":
 {
-	"frame": {"x":521,"y":261,"w":128,"h":128},
+	"frame": {"x":651,"y":261,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -162,7 +162,7 @@
 },
 "symbol_e.png":
 {
-	"frame": {"x":781,"y":131,"w":128,"h":128},
+	"frame": {"x":521,"y":261,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -170,7 +170,7 @@
 },
 "symbol_m1.png":
 {
-	"frame": {"x":631,"y":1,"w":128,"h":128},
+	"frame": {"x":521,"y":131,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -178,7 +178,7 @@
 },
 "symbol_m2.png":
 {
-	"frame": {"x":131,"y":131,"w":128,"h":128},
+	"frame": {"x":763,"y":1,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -186,7 +186,7 @@
 },
 "symbol_m_body.png":
 {
-	"frame": {"x":761,"y":1,"w":128,"h":128},
+	"frame": {"x":893,"y":1,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -202,7 +202,7 @@
 },
 "symbol_s.png":
 {
-	"frame": {"x":391,"y":131,"w":128,"h":128},
+	"frame": {"x":261,"y":131,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -210,7 +210,7 @@
 },
 "symbol_shift.png":
 {
-	"frame": {"x":651,"y":131,"w":128,"h":128},
+	"frame": {"x":131,"y":131,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -218,7 +218,7 @@
 },
 "symbol_w.png":
 {
-	"frame": {"x":261,"y":131,"w":128,"h":128},
+	"frame": {"x":651,"y":131,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -226,7 +226,7 @@
 },
 "symbol_wasd.png":
 {
-	"frame": {"x":521,"y":131,"w":128,"h":128},
+	"frame": {"x":391,"y":131,"w":128,"h":128},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
@@ -255,6 +255,22 @@
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
 	"sourceSize": {"w":64,"h":64}
+},
+"ui_restart.png":
+{
+	"frame": {"x":433,"y":1,"w":64,"h":64},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
+	"sourceSize": {"w":64,"h":64}
+},
+"ui_skip.png":
+{
+	"frame": {"x":367,"y":1,"w":64,"h":64},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
+	"sourceSize": {"w":64,"h":64}
 }},
 "animations": {
 	"symbol_m": ["symbol_m1.png","symbol_m2.png"]
@@ -264,8 +280,8 @@
 	"version": "1.0",
 	"image": "gameplay.png",
 	"format": "RGBA8888",
-	"size": {"w":944,"h":648},
+	"size": {"w":1022,"h":648},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:f17a634671c6707d25ed255980f01f5c:cba1a5cfead4ecc8ad4f76aa1e8f9a15:2f000f36c153dcd06e739670dfc91337$"
+	"smartupdate": "$TexturePacker:SmartUpdate:cb258d42f0b569f0206c95dbba5f36d8:dfd0db7dbf62b17be49c54a0edbbdcfa:2f000f36c153dcd06e739670dfc91337$"
 }
 }
