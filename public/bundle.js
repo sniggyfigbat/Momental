@@ -99,8 +99,8 @@
 
 
 
-var base64 = __webpack_require__(47)
-var ieee754 = __webpack_require__(48)
+var base64 = __webpack_require__(49)
+var ieee754 = __webpack_require__(50)
 var isArray = __webpack_require__(21)
 
 exports.Buffer = Buffer
@@ -2636,7 +2636,7 @@ function isPrimitive(arg) {
 }
 exports.isPrimitive = isPrimitive;
 
-exports.isBuffer = __webpack_require__(49);
+exports.isBuffer = __webpack_require__(51);
 
 function objectToString(o) {
   return Object.prototype.toString.call(o);
@@ -3096,7 +3096,7 @@ function objectToString(o) {
 
 var Buffer = __webpack_require__(0).Buffer;
 var Transform = __webpack_require__(9).Transform;
-var binding = __webpack_require__(62);
+var binding = __webpack_require__(64);
 var util = __webpack_require__(3);
 var assert = __webpack_require__(17).ok;
 var kMaxLength = __webpack_require__(0).kMaxLength;
@@ -3776,10 +3776,10 @@ var inherits = __webpack_require__(4);
 
 inherits(Stream, EE);
 Stream.Readable = __webpack_require__(15);
-Stream.Writable = __webpack_require__(57);
-Stream.Duplex = __webpack_require__(58);
-Stream.Transform = __webpack_require__(59);
-Stream.PassThrough = __webpack_require__(60);
+Stream.Writable = __webpack_require__(59);
+Stream.Duplex = __webpack_require__(60);
+Stream.Transform = __webpack_require__(61);
+Stream.PassThrough = __webpack_require__(62);
 
 // Backwards-compat with node 0.4.x
 Stream.Stream = Stream;
@@ -4588,7 +4588,7 @@ exports.Readable = exports;
 exports.Writable = __webpack_require__(16);
 exports.Duplex = __webpack_require__(5);
 exports.Transform = __webpack_require__(26);
-exports.PassThrough = __webpack_require__(56);
+exports.PassThrough = __webpack_require__(58);
 
 
 /***/ }),
@@ -4668,7 +4668,7 @@ util.inherits = __webpack_require__(4);
 
 /*<replacement>*/
 var internalUtil = {
-  deprecate: __webpack_require__(55)
+  deprecate: __webpack_require__(57)
 };
 /*</replacement>*/
 
@@ -5283,7 +5283,7 @@ Writable.prototype._destroy = function (err, cb) {
   this.end();
   cb(err);
 };
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(1), __webpack_require__(53).setImmediate, __webpack_require__(2)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(1), __webpack_require__(55).setImmediate, __webpack_require__(2)))
 
 /***/ }),
 /* 17 */
@@ -5862,9 +5862,9 @@ module.exports = bytesToUuid;
 
 var util = __webpack_require__(3);
 var Stream = __webpack_require__(9);
-var Parser = __webpack_require__(61);
-var Packer = __webpack_require__(72);
-var PNGSync = __webpack_require__(75);
+var Parser = __webpack_require__(63);
+var Packer = __webpack_require__(74);
+var PNGSync = __webpack_require__(77);
 
 
 var PNG = exports.PNG = function(options) {
@@ -6121,7 +6121,7 @@ util.inherits = __webpack_require__(4);
 /*</replacement>*/
 
 /*<replacement>*/
-var debugUtil = __webpack_require__(50);
+var debugUtil = __webpack_require__(52);
 var debug = void 0;
 if (debugUtil && debugUtil.debuglog) {
   debug = debugUtil.debuglog('stream');
@@ -6130,7 +6130,7 @@ if (debugUtil && debugUtil.debuglog) {
 }
 /*</replacement>*/
 
-var BufferList = __webpack_require__(51);
+var BufferList = __webpack_require__(53);
 var destroyImpl = __webpack_require__(24);
 var StringDecoder;
 
@@ -9042,8 +9042,8 @@ module.exports = function(indata, imageData) {
 
 var constants = __webpack_require__(8);
 var CrcStream = __webpack_require__(34);
-var bitPacker = __webpack_require__(73);
-var filter = __webpack_require__(74);
+var bitPacker = __webpack_require__(75);
+var filter = __webpack_require__(76);
 var zlib = __webpack_require__(7);
 
 var Packer = module.exports = function(options) {
@@ -9210,18 +9210,14 @@ SyncReader.prototype.process = function() {
 /* 39 */
 /***/ (function(module, exports) {
 
-//const planck = require('planck-js');
-//const PIXI = require('pixi.js');
-//const uuid = require('uuid');
-//const fs = require('fs');
-//const PNG = require('pngjs');
+//	***
+//	visuals.js start
+//	***
 
 let Sprite = PIXI.Sprite,
 	Vec2 = planck.Vec2,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures,
 	particleTex = PIXI.Loader.shared.resources["assets/particles.json"].textures;
-
-
 	
 let visuals = {};
 
@@ -10992,6 +10988,7 @@ const PNG = __webpack_require__(43).PNG;
 let Gameplay;
 var menus;
 var utils = __webpack_require__(44);
+var IH = __webpack_require__(45);
 
 //var fs = require('fs'),
 //	PNG = require('pngjs').PNG;
@@ -11182,7 +11179,7 @@ function setup() {
 	// More Aliases
 	gameplayTex = resources["assets/gameplay.json"].textures;
 	
-	menus = __webpack_require__(45);
+	menus = __webpack_require__(47);
 	
 	//activeUpdated = new menus.main(app, settings);
 	//activeUpdated.b_play = load_menu_quiz_player;
@@ -11385,12 +11382,9 @@ let load_editor_standin = (opts) => {
 
 let level_load = (levelName) => {
 	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
-	Gameplay = __webpack_require__(46);
-	const IH = __webpack_require__(82);
+	Gameplay = __webpack_require__(48);
 	
-	IH.setup(app.view);
-	
-	activeUpdated = new Gameplay(app, IH, settings, runData);
+	activeUpdated = new Gameplay(app, new IH(app.view), settings, runData);
 	
 	let levelStream;
 	
@@ -11429,6 +11423,7 @@ let level_load = (levelName) => {
 let level_win = (opts) => {
 	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
 	runData.levels[runData.currentIndex].victoryRunTime = opts.runTime;
+	runData.levels[runData.currentIndex].victoryRunInputs = opts.inputEvents;
 	
 	if (runData.runType != 'tutorial') {load_menu_quiz_feedback(); }
 	else {
@@ -11454,8 +11449,12 @@ let level_skip = (opts) => {
 }
 
 let gameLoop = (delta) => {
-	let deltaMS = app.ticker.deltaMS;	
-	if (activeUpdated && activeUpdated.update) { activeUpdated.update(deltaMS); }
+	let deltaMS = app.ticker.deltaMS;
+	
+	if (activeUpdated && activeUpdated.update) {
+		let ready = (activeUpdated.checkReady) ? activeUpdated.checkReady() : true;
+		if (ready) { activeUpdated.update(deltaMS); }
+	} 
 }
 
 /***/ }),
@@ -27361,7 +27360,223 @@ module.exports = utils;
 
 /***/ }),
 /* 45 */
+/***/ (function(module, exports, __webpack_require__) {
+
+//	***
+//	inputhandler.js start
+//	***
+
+const makeKey = __webpack_require__(46);
+
+let IH = class {
+	constructor(canvas) {
+		this.mode = 'input';
+		
+		this.keyNames = [];
+		this.keys = {};
+		
+		canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+	
+		this.setupKey(0, 'right',	68, 0xc);
+		this.setupKey(1, 'up',	87, 0xc);
+		this.setupKey(2, 'left',	65, 0xc);
+		this.setupKey(3, 'down',	83, 0xc);
+		this.setupKey(4, 'nextWeapon',		81, 0xc);
+		this.setupKey(5, 'previousWeapon',	69, 0xc);
+		this.setupKey(6, 'reload',	82, 0xc);
+		this.setupKey(7, 'slowTime',	16, 0xc);
+		this.setupKey(8, 'fire',	1,	0x1, true);
+		this.setupKey(9, 'detonate',	3,	0xc, true);
+		
+		this.lifetime = 0;
+		this.events = [];
+	}
+	
+	hasKey(keyName) {
+		return (this.keys[keyName] != null);
+	}
+	
+	setupKey(id, keyName, keyCode, keyTriggerBits, isMouse) {
+		this.deleteKey(keyName);
+		if (isMouse === true) { this.keys[keyName] = makeKey(id, keyName, keyCode, keyTriggerBits, true); }
+		else { this.keys[keyName] = makeKey(id, keyName, keyCode, keyTriggerBits); }
+		this.keyNames.push(keyName);
+	}
+	
+	deleteKey(keyName) {
+		if (this.hasKey(keyName)) {
+			this.keys[keyName].unsubscribe();
+			delete this.keys[keyName];
+		}
+		
+		let keyNameIndex = this.keyNames.findIndex((element) => (element === keyName));
+		if (keyNameIndex != null && keyNameIndex != -1) { this.keyNames.splice(keyNameIndex, 1); }
+	}
+	
+	deleteAllKeys() {
+		while (this.keyNames.length > 0) { this.deleteKey(this.keyNames[0]); }
+	}
+	
+	isTriggered(keyName) {
+		if (this.hasKey(keyName)) { return this.keys[keyName].triggered; }
+		console.log("ERROR: IH.isTriggered() called for a key that does not exist ('" + keyName + "')!");
+		return false;
+	}
+	
+	getState(keyName) {
+		if (this.hasKey(keyName)) {
+			let disambiguated = this.keys[keyName].state; // Should copy by value, not reference? I think?
+			return disambiguated;
+		}
+		console.log("ERROR: IH.getState() called for a key that does not exist ('" + keyName + "')!");
+		return 0x2;
+	}
+	
+	update(deltaS, mousePos) {
+		this.lifetime += deltaS;
+		
+		this.keyNames.forEach((element) => {
+			let event = this.keys[element].step();
+			if (event != null) {
+				if (this.keys[element].isMouse) { event.position = mousePos; }
+				event.time = this.lifetime;
+				this.events.push(event);
+			}
+		});
+	}
+};
+
+module.exports = IH;
+
+/***/ }),
+/* 46 */
 /***/ (function(module, exports) {
+
+//	***
+//	key.js start
+//	***
+
+/*
+ *	Key state / Trigger bits:
+ *	1	:	0x1	:	OnRelease
+ *	2	:	0x2	:	Released
+ *	4	:	0x4	:	Pressed
+ *	8	:	0x8	:	OnPress
+ *	Construct 'trigger bits' by adding up all key states that should act as triggered.
+*/
+
+
+class Key {
+	constructor(id, name, code, triggerBits, isMouse) {
+		if (id != null) { this.id = id } else { console.log("ERROR: No valid ID given to key!") }
+		this.name = (name != null) ? name : 'unnamed';
+		this.isMouse = isMouse === true;
+		
+		if (code != null) { this.code = code; }
+		else {
+			this.code = 85; // 'U', for 'unbound'.
+			console.log('Warning! Key constructor called with no code!');
+		}
+		
+		if (triggerBits != null) { this.triggerBits = triggerBits; } 
+		else { this.triggerBits = 0xc; } // Defaults to triggering on any pressed.
+		
+		this.state = 0x2;
+		
+		this.downListener = null;
+		this.upListener = null;
+	}
+	
+	get triggered() {
+		if (this.state & this.triggerBits) { return true; }
+		return false;
+	}
+	
+	step() {
+		// Call this at the end of each update cycle, in order to pregress key state.
+		if (this.state === 0x8) {
+			this.state = 0x4;
+			return {id: this.id, state: 0x8};
+		} // If OnPress, progress to Pressed.
+		
+		if (this.state === 0x1) {
+			this.state = 0x2;
+			return {id: this.id, state: 0x1};
+		} // If OnRelease, progress to Released.
+	}
+	
+	downHandler(event) {
+		if (event.keyCode === this.code) {
+			if (this.state & 0x3) {
+				this.state = 0x8;
+			}
+			event.preventDefault();
+		}
+	}
+	
+	upHandler(event) {
+		if (event.keyCode === this.code) {
+			if (this.state & 0xc) {
+				this.state = 0x1;
+			}
+			event.preventDefault();
+		}
+	}
+	
+	downMouseHandler(event) {
+		if (event.which === this.code) {
+			if (this.state & 0x3) {
+				this.state = 0x8;
+			}
+			event.preventDefault();
+		}
+	}
+	
+	upMouseHandler(event) {
+		if (event.which === this.code) {
+			if (this.state & 0xc) {
+				this.state = 0x1;
+			}
+			event.preventDefault();
+		}
+	}
+	
+	unsubscribe() {
+		if (this.downListener != null) { window.removeEventListener("keydown", this.downListener); }
+		if (this.upListener != null) { window.removeEventListener("keyup", this.upListener); }
+	}
+}
+
+function makeKey(id, name, code, triggerBits, isMouse) {
+	let retKey = new Key(id, name, code, triggerBits, isMouse);
+	
+	if (isMouse === true) {
+		retKey.downListener = retKey.downMouseHandler.bind(retKey);
+		retKey.upListener = retKey.upMouseHandler.bind(retKey);
+		
+		window.addEventListener("mousedown", retKey.downListener, false);
+		window.addEventListener("mouseup", retKey.upListener, false);
+	}
+	else {
+		retKey.downListener = retKey.downHandler.bind(retKey);
+		retKey.upListener = retKey.upHandler.bind(retKey);
+		
+		window.addEventListener("keydown", retKey.downListener, false);
+		window.addEventListener("keyup", retKey.upListener, false);
+	}
+	
+	return retKey;
+}
+
+module.exports = makeKey;
+
+/***/ }),
+/* 47 */
+/***/ (function(module, exports) {
+
+//	***
+//	menus.js start
+//	***
 
 let Sprite = PIXI.Sprite,
 	Vec2 = planck.Vec2,
@@ -28800,7 +29015,7 @@ menus.editor_standin = class {
 module.exports = menus;
 
 /***/ }),
-/* 46 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //	***
@@ -28813,8 +29028,8 @@ const uuid = __webpack_require__(13);
 //const fs = require('fs');
 const PNG = __webpack_require__(20).PNG;
 
-const mix = __webpack_require__(80);
-const prefabs = __webpack_require__(81);
+const mix = __webpack_require__(82);
+const prefabs = __webpack_require__(83);
 const visuals = __webpack_require__(39);
 
 'use strict'
@@ -28824,6 +29039,8 @@ let Sprite = PIXI.Sprite,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures;
 
 function Gameplay(app, IH, settings, runData) {
+	this._levelLoaded = false;
+	
 	this.settings = (settings != null) ? settings : {
 		autoReload: true,
 		autoSlowAim: true,
@@ -28917,6 +29134,7 @@ function Gameplay(app, IH, settings, runData) {
 		ammo:		0,
 		maxAmmo:	6	// Assume mas is always six?
 	}
+	this.mousePosGU = Vec2(0, 0);
 	
 	this.particleStageLower = new PIXI.Container();
 	this.particleStageLower.zIndex = 10;
@@ -29334,6 +29552,8 @@ Gameplay.prototype.loadLevel = function(level) {
 		this.makeObject('field_kill', null, Vec2(0, y), 0);
 		this.makeObject('field_kill', null, Vec2(34, y), 0);
 	}
+	
+	this._levelLoaded = true;
 }
 
 /*
@@ -29918,6 +30138,10 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 //	Core functionality
 //	***
 
+Gameplay.prototype.checkReady = function() {
+	return (this._levelLoaded && (this.IH.mode == 'input' || this.IH.ready));
+}
+
 Gameplay.prototype.update = function(deltaMS) {
 	if (this._gameEnded != false) {
 		this._afterEndTime -= deltaMS;
@@ -29931,9 +30155,8 @@ Gameplay.prototype.update = function(deltaMS) {
 			if (this._endState == 1) {
 				this._behaviourTrigger = true;
 				this._behaviour = "trigger_end_victory";
-				this._behaviourOptions = {
-					runTime: this.runTimeS
-				};
+				this._behaviourOptions = { runTime: this.runTimeS };
+				if (this.IH.mode == 'input') { this._behaviourOptions.inputEvents = this.IH.events; }
 			}
 			else if (this._endState == 2) {
 				this._behaviourTrigger = true;
@@ -29952,7 +30175,7 @@ Gameplay.prototype.update = function(deltaMS) {
 		}
 	}
 	else {
-		if (this._startDarkTimer > 0) {
+		if (this.checkReady() && this._startDarkTimer > 0) {
 			this._startDarkTimer -= deltaMS;
 			this.darkOverlay.alpha = this._startDarkTimer / 500;
 			if (this._startDarkTimer <= 0) {
@@ -29964,14 +30187,6 @@ Gameplay.prototype.update = function(deltaMS) {
 	
 	// Update runTimeS
 	if (this.runTimeS < 300) { this.runTimeS += deltaMS * 0.001; }
-	
-	// Update cursor stage position
-	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
-	this.cursorStage.position.set(mousePos.x, mousePos.y);
-	
-	let bounds = this.app.stage.getBounds();
-	let mouseInFrame = ((mousePos.x >= 0 && mousePos.x < bounds.width) && (mousePos.y >= 0 && mousePos.y < bounds.height));
-	this.cursorStage.visible = mouseInFrame;
 	
 	let realDeltaMS = deltaMS;
 	
@@ -29993,6 +30208,25 @@ Gameplay.prototype.update = function(deltaMS) {
 		this.slowOverlay.alpha = 0;
 	}
 	
+	// Update InputHandler, cursor stage position
+	let mousePos = new PIXI.Point(0, 0);
+	if (this.IH.mode == 'input') {
+		mousePos = this.app.renderer.plugins.interaction.mouse.global;
+		
+		let stageGlobalPos = new PIXI.Point(0, 0);
+		this.stage.getGlobalPosition(stageGlobalPos, false);
+		
+		let relativeMousePos = new PIXI.Point(mousePos.x - stageGlobalPos.x, mousePos.y - stageGlobalPos.y);
+		this.mousePosGU = this.absP2GU(relativeMousePos);
+	}
+	else { this.IH.update(deltaS, this.mousePosGU); }
+	this.cursorStage.position.set(mousePos.x, mousePos.y);
+	
+	let bounds = this.app.stage.getBounds();
+	let mouseInFrame = ((mousePos.x >= 0 && mousePos.x < bounds.width) && (mousePos.y >= 0 && mousePos.y < bounds.height));
+	this.cursorStage.visible = mouseInFrame;
+	
+	// World Step
 	this.world.step(deltaS);
 	
 	// Pre-update. I thought I'd end up using this way more than I have.
@@ -30032,7 +30266,7 @@ Gameplay.prototype.update = function(deltaMS) {
 	
 	//if (this.IH.isTriggered('test')) {console.log('Test key pressed.');}
 	
-	this.IH.update(deltaMS);
+	if (this.IH.mode == 'input') { this.IH.update(deltaS, this.mousePosGU); }
 	
 	this.cleanup();
 	
@@ -30074,6 +30308,7 @@ Gameplay.prototype.destroy = function() {
 	this.stage.destroy({ children: true });
 	this.cursorStage.destroy({ children: true });
 	delete this.world;
+	this.IH.deleteAllKeys();
 }
 
 module.exports = Gameplay;
@@ -30115,7 +30350,7 @@ module.exports = Gameplay;
 
 
 /***/ }),
-/* 47 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30273,7 +30508,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 48 */
+/* 50 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -30363,7 +30598,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 49 */
+/* 51 */
 /***/ (function(module, exports) {
 
 module.exports = function isBuffer(arg) {
@@ -30374,13 +30609,13 @@ module.exports = function isBuffer(arg) {
 }
 
 /***/ }),
-/* 50 */
+/* 52 */
 /***/ (function(module, exports) {
 
 /* (ignored) */
 
 /***/ }),
-/* 51 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30389,7 +30624,7 @@ module.exports = function isBuffer(arg) {
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Buffer = __webpack_require__(11).Buffer;
-var util = __webpack_require__(52);
+var util = __webpack_require__(54);
 
 function copyBuffer(src, target, offset) {
   src.copy(target, offset);
@@ -30465,13 +30700,13 @@ if (util && util.inspect && util.inspect.custom) {
 }
 
 /***/ }),
-/* 52 */
+/* 54 */
 /***/ (function(module, exports) {
 
 /* (ignored) */
 
 /***/ }),
-/* 53 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var scope = (typeof global !== "undefined" && global) ||
@@ -30527,7 +30762,7 @@ exports._unrefActive = exports.active = function(item) {
 };
 
 // setimmediate attaches itself to the global object
-__webpack_require__(54);
+__webpack_require__(56);
 // On some exotic environments, it's not clear which object `setimmediate` was
 // able to install onto.  Search each possibility in the same order as the
 // `setimmediate` library.
@@ -30541,7 +30776,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(2)))
 
 /***/ }),
-/* 54 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -30734,7 +30969,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(2), __webpack_require__(1)))
 
 /***/ }),
-/* 55 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {
@@ -30808,7 +31043,7 @@ function config (name) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(2)))
 
 /***/ }),
-/* 56 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30861,35 +31096,35 @@ PassThrough.prototype._transform = function (chunk, encoding, cb) {
 };
 
 /***/ }),
-/* 57 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(16);
 
 
 /***/ }),
-/* 58 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(5);
 
 
 /***/ }),
-/* 59 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(15).Transform
 
 
 /***/ }),
-/* 60 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(15).PassThrough
 
 
 /***/ }),
-/* 61 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30898,7 +31133,7 @@ module.exports = __webpack_require__(15).PassThrough
 var util = __webpack_require__(3);
 var zlib = __webpack_require__(7);
 var ChunkStream = __webpack_require__(29);
-var FilterAsync = __webpack_require__(71);
+var FilterAsync = __webpack_require__(73);
 var Parser = __webpack_require__(33);
 var bitmapper = __webpack_require__(35);
 var formatNormaliser = __webpack_require__(36);
@@ -31060,7 +31295,7 @@ ParserAsync.prototype._complete = function(filteredData) {
 
 
 /***/ }),
-/* 62 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -31069,10 +31304,10 @@ ParserAsync.prototype._complete = function(filteredData) {
 
 var assert = __webpack_require__(17);
 
-var Zstream = __webpack_require__(63);
-var zlib_deflate = __webpack_require__(64);
-var zlib_inflate = __webpack_require__(67);
-var constants = __webpack_require__(70);
+var Zstream = __webpack_require__(65);
+var zlib_deflate = __webpack_require__(66);
+var zlib_inflate = __webpack_require__(69);
+var constants = __webpack_require__(72);
 
 for (var key in constants) {
   exports[key] = constants[key];
@@ -31476,7 +31711,7 @@ exports.Zlib = Zlib;
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer, __webpack_require__(1)))
 
 /***/ }),
-/* 63 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -31530,7 +31765,7 @@ module.exports = ZStream;
 
 
 /***/ }),
-/* 64 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -31556,10 +31791,10 @@ module.exports = ZStream;
 // 3. This notice may not be removed or altered from any source distribution.
 
 var utils   = __webpack_require__(12);
-var trees   = __webpack_require__(65);
+var trees   = __webpack_require__(67);
 var adler32 = __webpack_require__(27);
 var crc32   = __webpack_require__(28);
-var msg     = __webpack_require__(66);
+var msg     = __webpack_require__(68);
 
 /* Public constants ==========================================================*/
 /* ===========================================================================*/
@@ -33411,7 +33646,7 @@ exports.deflateTune = deflateTune;
 
 
 /***/ }),
-/* 65 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34640,7 +34875,7 @@ exports._tr_align = _tr_align;
 
 
 /***/ }),
-/* 66 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34679,7 +34914,7 @@ module.exports = {
 
 
 /***/ }),
-/* 67 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34707,8 +34942,8 @@ module.exports = {
 var utils         = __webpack_require__(12);
 var adler32       = __webpack_require__(27);
 var crc32         = __webpack_require__(28);
-var inflate_fast  = __webpack_require__(68);
-var inflate_table = __webpack_require__(69);
+var inflate_fast  = __webpack_require__(70);
+var inflate_table = __webpack_require__(71);
 
 var CODES = 0;
 var LENS = 1;
@@ -36242,7 +36477,7 @@ exports.inflateUndermine = inflateUndermine;
 
 
 /***/ }),
-/* 68 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36594,7 +36829,7 @@ module.exports = function inflate_fast(strm, start) {
 
 
 /***/ }),
-/* 69 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36944,7 +37179,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
 
 
 /***/ }),
-/* 70 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37019,7 +37254,7 @@ module.exports = {
 
 
 /***/ }),
-/* 71 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37052,7 +37287,7 @@ util.inherits(FilterAsync, ChunkStream);
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 72 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37105,7 +37340,7 @@ PackerAsync.prototype.pack = function(data, width, height, gamma) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 73 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37256,7 +37491,7 @@ module.exports = function(dataIn, width, height, options) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 74 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37454,15 +37689,15 @@ module.exports = function(pxData, width, height, options, bpp) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 75 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 
-var parse = __webpack_require__(76);
-var pack = __webpack_require__(79);
+var parse = __webpack_require__(78);
+var pack = __webpack_require__(81);
 
 
 exports.read = function(buffer, options) {
@@ -37477,7 +37712,7 @@ exports.write = function(png, options) {
 
 
 /***/ }),
-/* 76 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37485,12 +37720,12 @@ exports.write = function(png, options) {
 
 var hasSyncZlib = true;
 var zlib = __webpack_require__(7);
-var inflateSync = __webpack_require__(77);
+var inflateSync = __webpack_require__(79);
 if (!zlib.deflateSync) {
   hasSyncZlib = false;
 }
 var SyncReader = __webpack_require__(38);
-var FilterSync = __webpack_require__(78);
+var FilterSync = __webpack_require__(80);
 var Parser = __webpack_require__(33);
 var bitmapper = __webpack_require__(35);
 var formatNormaliser = __webpack_require__(36);
@@ -37590,7 +37825,7 @@ module.exports = function(buffer, options) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 77 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37759,7 +37994,7 @@ exports.inflateSync = inflateSync;
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(1), __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 78 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37790,7 +38025,7 @@ exports.process = function(inBuffer, bitmapInfo) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 79 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37846,7 +38081,7 @@ module.exports = function(metaData, opt) {
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(0).Buffer))
 
 /***/ }),
-/* 80 */
+/* 82 */
 /***/ (function(module, exports) {
 
 //	***
@@ -37874,7 +38109,7 @@ class MixinBuilder {
 module.exports = mix;
 
 /***/ }),
-/* 81 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //	***
@@ -38918,13 +39153,15 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		// Handle weapons
 		if (this.currentWeapon != null && this[this.currentWeapon] != null) {
 			let current = this[this.currentWeapon];
-			let mouse = this.GP.app.renderer.plugins.interaction.mouse;
+			//let mouse = this.GP.app.renderer.plugins.interaction.mouse;
 			
 			current.position = this.position;
 			
-			let wepPos = new PIXI.Point(0, 0);
-			current.sprites.getGlobalPosition(wepPos, false);
-			current.rotation = -utils.rotateToPoint(mouse.global, wepPos);
+			//let wepPos = new PIXI.Point(0, 0);
+			//current.sprites.getGlobalPosition(wepPos, false);
+			//current.rotation = -utils.rotateToPoint(mouse.global, wepPos);
+			
+			current.rotation = utils.rotateToPoint(this.GP.mousePosGU, this.position);
 			
 			if (reload) { current.reload(); }
 		}
@@ -42936,199 +43173,6 @@ prefabs.map = {
 }
 
 module.exports = prefabs;
-
-/***/ }),
-/* 82 */
-/***/ (function(module, exports, __webpack_require__) {
-
-//	***
-//	inputhandler.js start
-//	***
-
-const makeKey = __webpack_require__(83);
-
-let IH = {};
-
-IH.keyNames = [];
-IH.keys = {};
-
-IH.hasKey = (keyName) => (IH.keys[keyName] != null);
-
-IH.setupKey = (keyName, keyCode, keyTriggerBits, isMouse) => {
-	IH.deleteKey(keyName);
-	if (isMouse === true) { IH.keys[keyName] = makeKey(keyName, keyCode, keyTriggerBits, true); }
-	else { IH.keys[keyName] = makeKey(keyName, keyCode, keyTriggerBits); }
-	IH.keyNames.push(keyName);
-}
-
-IH.deleteKey = (keyName) => {
-	if (IH.hasKey(keyName)) {
-		IH.keys[keyName].unsubscribe();
-		delete IH.keys[keyName];
-	}
-	
-	keyNameIndex = IH.keyNames.findIndex((element) => (element === keyName));
-	if (keyNameIndex != null && keyNameIndex != -1) { IH.keyNames.splice(keyNameIndex, 1); }
-}
-
-IH.deleteAllKeys = () => {
-	while (IH.keyNames.length > 0) { IH.deleteKey(IH.keyNames[0]); }
-}
-
-IH.isTriggered = (keyName) => {
-	if (IH.hasKey(keyName)) { return IH.keys[keyName].triggered; }
-	console.log("ERROR: IH.isTriggered() called for a key that does not exist ('" + keyName + "')!");
-	return false;
-}
-
-IH.getState = (keyName) => {
-	if (IH.hasKey(keyName)) {
-		let disambiguated = IH.keys[keyName].state; // Should copy by value, not reference? I think?
-		return disambiguated;
-	}
-	console.log("ERROR: IH.getState() called for a key that does not exist ('" + keyName + "')!");
-	return 0x2;
-}
-
-IH.setup = function(canvas) {
-	canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); });
-	
-	this.setupKey('left',	65, 0xc);
-	this.setupKey('right',	68, 0xc);
-	this.setupKey('up',	87, 0xc);
-	this.setupKey('down',	83, 0xc);
-	this.setupKey('nextWeapon',		81, 0xc);
-	this.setupKey('previousWeapon',	69, 0xc);
-	this.setupKey('reload',	82, 0xc);
-	this.setupKey('slowTime',	16, 0xc);
-	this.setupKey('fire',	1,	0x1, true);
-	this.setupKey('detonate',	3,	0xc, true);
-}
-
-IH.update = (deltaMS) => {
-	IH.keyNames.forEach((element) => {
-		IH.keys[element].step();
-	});
-}
-
-module.exports = IH;
-
-/***/ }),
-/* 83 */
-/***/ (function(module, exports) {
-
-//	***
-//	key.js start
-//	***
-
-/*
- *	Key state / Trigger bits:
- *	1	:	0x1	:	OnRelease
- *	2	:	0x2	:	Released
- *	4	:	0x4	:	Pressed
- *	8	:	0x8	:	OnPress
- *	Construct 'trigger bits' by adding up all key states that should act as triggered.
-*/
-
-
-class Key {
-	constructor(name, code, triggerBits) {
-		if (name != null) { this.name = name; }
-		else {
-			this.name = 'unnamed';
-			console.log('Warning! Key constructor called with no name!');
-		}
-		
-		if (code != null) { this.code = code; }
-		else {
-			this.code = 85; // 'U', for 'unbound'.
-			console.log('Warning! Key constructor called with no code!');
-		}
-		
-		if (triggerBits != null) { this.triggerBits = triggerBits; } 
-		else { this.triggerBits = 0xc; } // Defaults to triggering on any pressed.
-		
-		this.state = 0x2;
-		
-		this.downListener = null;
-		this.upListener = null;
-	}
-	
-	get triggered() {
-		if (this.state & this.triggerBits) { return true; }
-		return false;
-	}
-	
-	step() {
-		// Call this at the end of each update cycle, in order to pregress key state.
-		if (this.state === 0x8) { this.state = 0x4; } // If OnPress, progress to Pressed.
-		if (this.state === 0x1) { this.state = 0x2; } // If OnRelease, progress to Released.
-	}
-	
-	downHandler(event) {
-		if (event.keyCode === this.code) {
-			if (this.state & 0x3) {
-				this.state = 0x8;
-			}
-			event.preventDefault();
-		}
-	}
-	
-	upHandler(event) {
-		if (event.keyCode === this.code) {
-			if (this.state & 0xc) {
-				this.state = 0x1;
-			}
-			event.preventDefault();
-		}
-	}
-	
-	downMouseHandler(event) {
-		if (event.which === this.code) {
-			if (this.state & 0x3) {
-				this.state = 0x8;
-			}
-			event.preventDefault();
-		}
-	}
-	
-	upMouseHandler(event) {
-		if (event.which === this.code) {
-			if (this.state & 0xc) {
-				this.state = 0x1;
-			}
-			event.preventDefault();
-		}
-	}
-	
-	unsubscribe() {
-		if (this.downListener != null) { window.removeEventListener("keydown", this.downListener); }
-		if (this.upListener != null) { window.removeEventListener("keyup", this.upListener); }
-	}
-}
-
-function makeKey(name, code, triggerBits, isMouse) {
-	let retKey = new Key(name, code, triggerBits);
-	
-	if (isMouse === true) {
-		retKey.downListener = retKey.downMouseHandler.bind(retKey);
-		retKey.upListener = retKey.upMouseHandler.bind(retKey);
-		
-		window.addEventListener("mousedown", retKey.downListener, false);
-		window.addEventListener("mouseup", retKey.upListener, false);
-	}
-	else {
-		retKey.downListener = retKey.downHandler.bind(retKey);
-		retKey.upListener = retKey.upHandler.bind(retKey);
-		
-		window.addEventListener("keydown", retKey.downListener, false);
-		window.addEventListener("keyup", retKey.upListener, false);
-	}
-	
-	return retKey;
-}
-
-module.exports = makeKey;
 
 /***/ })
 /******/ ]);

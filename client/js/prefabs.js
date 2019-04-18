@@ -1039,13 +1039,15 @@ prefabs.mixins['player'] = (superclass) => class extends superclass {
 		// Handle weapons
 		if (this.currentWeapon != null && this[this.currentWeapon] != null) {
 			let current = this[this.currentWeapon];
-			let mouse = this.GP.app.renderer.plugins.interaction.mouse;
+			//let mouse = this.GP.app.renderer.plugins.interaction.mouse;
 			
 			current.position = this.position;
 			
-			let wepPos = new PIXI.Point(0, 0);
-			current.sprites.getGlobalPosition(wepPos, false);
-			current.rotation = -utils.rotateToPoint(mouse.global, wepPos);
+			//let wepPos = new PIXI.Point(0, 0);
+			//current.sprites.getGlobalPosition(wepPos, false);
+			//current.rotation = -utils.rotateToPoint(mouse.global, wepPos);
+			
+			current.rotation = utils.rotateToPoint(this.GP.mousePosGU, this.position);
 			
 			if (reload) { current.reload(); }
 		}

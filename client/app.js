@@ -11,6 +11,7 @@ const PNG = require('pngjs/browser').PNG;
 let Gameplay;
 var menus;
 var utils = require('./js/utils');
+var IH = require('./js/inputhandler');
 
 //var fs = require('fs'),
 //	PNG = require('pngjs').PNG;
@@ -405,11 +406,8 @@ let load_editor_standin = (opts) => {
 let level_load = (levelName) => {
 	if (activeUpdated && activeUpdated.destroy) { activeUpdated.destroy(); }
 	Gameplay = require('./js/gameplay');
-	const IH = require('./js/inputhandler');
 	
-	IH.setup(app.view);
-	
-	activeUpdated = new Gameplay(app, IH, settings, runData);
+	activeUpdated = new Gameplay(app, new IH(app.view), settings, runData);
 	
 	let levelStream;
 	
@@ -448,6 +446,7 @@ let level_load = (levelName) => {
 let level_win = (opts) => {
 	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
 	runData.levels[runData.currentIndex].victoryRunTime = opts.runTime;
+	runData.levels[runData.currentIndex].victoryRunInputs = opts.inputEvents;
 	
 	if (runData.runType != 'tutorial') {load_menu_quiz_feedback(); }
 	else {
@@ -473,6 +472,10 @@ let level_skip = (opts) => {
 }
 
 let gameLoop = (delta) => {
-	let deltaMS = app.ticker.deltaMS;	
-	if (activeUpdated && activeUpdated.update) { activeUpdated.update(deltaMS); }
+	let deltaMS = app.ticker.deltaMS;
+	
+	if (activeUpdated && activeUpdated.update) {
+		let ready = (activeUpdated.checkReady) ? activeUpdated.checkReady() : true;
+		if (ready) { activeUpdated.update(deltaMS); }
+	} 
 }

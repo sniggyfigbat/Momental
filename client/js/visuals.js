@@ -1,15 +1,11 @@
-//const planck = require('planck-js');
-//const PIXI = require('pixi.js');
-//const uuid = require('uuid');
-//const fs = require('fs');
-//const PNG = require('pngjs');
+//	***
+//	visuals.js start
+//	***
 
 let Sprite = PIXI.Sprite,
 	Vec2 = planck.Vec2,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures,
 	particleTex = PIXI.Loader.shared.resources["assets/particles.json"].textures;
-
-
 	
 let visuals = {};
 

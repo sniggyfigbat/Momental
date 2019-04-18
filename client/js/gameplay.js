@@ -19,6 +19,8 @@ let Sprite = PIXI.Sprite,
 	gameplayTex = PIXI.Loader.shared.resources["assets/gameplay.json"].textures;
 
 function Gameplay(app, IH, settings, runData) {
+	this._levelLoaded = false;
+	
 	this.settings = (settings != null) ? settings : {
 		autoReload: true,
 		autoSlowAim: true,
@@ -112,6 +114,7 @@ function Gameplay(app, IH, settings, runData) {
 		ammo:		0,
 		maxAmmo:	6	// Assume mas is always six?
 	}
+	this.mousePosGU = Vec2(0, 0);
 	
 	this.particleStageLower = new PIXI.Container();
 	this.particleStageLower.zIndex = 10;
@@ -529,6 +532,8 @@ Gameplay.prototype.loadLevel = function(level) {
 		this.makeObject('field_kill', null, Vec2(0, y), 0);
 		this.makeObject('field_kill', null, Vec2(34, y), 0);
 	}
+	
+	this._levelLoaded = true;
 }
 
 /*
@@ -1113,6 +1118,10 @@ Gameplay.prototype.getObjectsWithTag = function(tag, areStatic) {
 //	Core functionality
 //	***
 
+Gameplay.prototype.checkReady = function() {
+	return (this._levelLoaded && (this.IH.mode == 'input' || this.IH.ready));
+}
+
 Gameplay.prototype.update = function(deltaMS) {
 	if (this._gameEnded != false) {
 		this._afterEndTime -= deltaMS;
@@ -1126,9 +1135,8 @@ Gameplay.prototype.update = function(deltaMS) {
 			if (this._endState == 1) {
 				this._behaviourTrigger = true;
 				this._behaviour = "trigger_end_victory";
-				this._behaviourOptions = {
-					runTime: this.runTimeS
-				};
+				this._behaviourOptions = { runTime: this.runTimeS };
+				if (this.IH.mode == 'input') { this._behaviourOptions.inputEvents = this.IH.events; }
 			}
 			else if (this._endState == 2) {
 				this._behaviourTrigger = true;
@@ -1147,7 +1155,7 @@ Gameplay.prototype.update = function(deltaMS) {
 		}
 	}
 	else {
-		if (this._startDarkTimer > 0) {
+		if (this.checkReady() && this._startDarkTimer > 0) {
 			this._startDarkTimer -= deltaMS;
 			this.darkOverlay.alpha = this._startDarkTimer / 500;
 			if (this._startDarkTimer <= 0) {
@@ -1159,14 +1167,6 @@ Gameplay.prototype.update = function(deltaMS) {
 	
 	// Update runTimeS
 	if (this.runTimeS < 300) { this.runTimeS += deltaMS * 0.001; }
-	
-	// Update cursor stage position
-	let mousePos = this.app.renderer.plugins.interaction.mouse.global;
-	this.cursorStage.position.set(mousePos.x, mousePos.y);
-	
-	let bounds = this.app.stage.getBounds();
-	let mouseInFrame = ((mousePos.x >= 0 && mousePos.x < bounds.width) && (mousePos.y >= 0 && mousePos.y < bounds.height));
-	this.cursorStage.visible = mouseInFrame;
 	
 	let realDeltaMS = deltaMS;
 	
@@ -1188,6 +1188,25 @@ Gameplay.prototype.update = function(deltaMS) {
 		this.slowOverlay.alpha = 0;
 	}
 	
+	// Update InputHandler, cursor stage position
+	let mousePos = new PIXI.Point(0, 0);
+	if (this.IH.mode == 'input') {
+		mousePos = this.app.renderer.plugins.interaction.mouse.global;
+		
+		let stageGlobalPos = new PIXI.Point(0, 0);
+		this.stage.getGlobalPosition(stageGlobalPos, false);
+		
+		let relativeMousePos = new PIXI.Point(mousePos.x - stageGlobalPos.x, mousePos.y - stageGlobalPos.y);
+		this.mousePosGU = this.absP2GU(relativeMousePos);
+	}
+	else { this.IH.update(deltaS, this.mousePosGU); }
+	this.cursorStage.position.set(mousePos.x, mousePos.y);
+	
+	let bounds = this.app.stage.getBounds();
+	let mouseInFrame = ((mousePos.x >= 0 && mousePos.x < bounds.width) && (mousePos.y >= 0 && mousePos.y < bounds.height));
+	this.cursorStage.visible = mouseInFrame;
+	
+	// World Step
 	this.world.step(deltaS);
 	
 	// Pre-update. I thought I'd end up using this way more than I have.
@@ -1227,7 +1246,7 @@ Gameplay.prototype.update = function(deltaMS) {
 	
 	//if (this.IH.isTriggered('test')) {console.log('Test key pressed.');}
 	
-	this.IH.update(deltaMS);
+	if (this.IH.mode == 'input') { this.IH.update(deltaS, this.mousePosGU); }
 	
 	this.cleanup();
 	
@@ -1269,6 +1288,7 @@ Gameplay.prototype.destroy = function() {
 	this.stage.destroy({ children: true });
 	this.cursorStage.destroy({ children: true });
 	delete this.world;
+	this.IH.deleteAllKeys();
 }
 
 module.exports = Gameplay;

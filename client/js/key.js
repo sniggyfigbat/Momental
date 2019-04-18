@@ -13,12 +13,10 @@
 
 
 class Key {
-	constructor(name, code, triggerBits) {
-		if (name != null) { this.name = name; }
-		else {
-			this.name = 'unnamed';
-			console.log('Warning! Key constructor called with no name!');
-		}
+	constructor(id, name, code, triggerBits, isMouse) {
+		if (id != null) { this.id = id } else { console.log("ERROR: No valid ID given to key!") }
+		this.name = (name != null) ? name : 'unnamed';
+		this.isMouse = isMouse === true;
 		
 		if (code != null) { this.code = code; }
 		else {
@@ -42,8 +40,15 @@ class Key {
 	
 	step() {
 		// Call this at the end of each update cycle, in order to pregress key state.
-		if (this.state === 0x8) { this.state = 0x4; } // If OnPress, progress to Pressed.
-		if (this.state === 0x1) { this.state = 0x2; } // If OnRelease, progress to Released.
+		if (this.state === 0x8) {
+			this.state = 0x4;
+			return {id: this.id, state: 0x8};
+		} // If OnPress, progress to Pressed.
+		
+		if (this.state === 0x1) {
+			this.state = 0x2;
+			return {id: this.id, state: 0x1};
+		} // If OnRelease, progress to Released.
 	}
 	
 	downHandler(event) {
@@ -88,8 +93,8 @@ class Key {
 	}
 }
 
-function makeKey(name, code, triggerBits, isMouse) {
-	let retKey = new Key(name, code, triggerBits);
+function makeKey(id, name, code, triggerBits, isMouse) {
+	let retKey = new Key(id, name, code, triggerBits, isMouse);
 	
 	if (isMouse === true) {
 		retKey.downListener = retKey.downMouseHandler.bind(retKey);

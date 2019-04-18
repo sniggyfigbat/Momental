@@ -1,3 +1,7 @@
+//	***
+//	menus.js start
+//	***
+
 let Sprite = PIXI.Sprite,
 	Vec2 = planck.Vec2,
 	gameplayTex =	PIXI.Loader.shared.resources["assets/gameplay.json"].textures,
