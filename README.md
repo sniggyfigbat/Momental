@@ -1,6 +1,7 @@
 # MOMENTAL
 # IMAT3451 / Final Year Project Submission
 ## P13186907 / Stefan C Bauer
+## Supervisor Dr. Archie Khuman / Second Marker Professor Eerke Boiten
 
 This is a web-based platformer game, designed and built as a tool for gathering a dataset for AI work.
 

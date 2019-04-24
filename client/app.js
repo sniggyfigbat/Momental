@@ -20,7 +20,9 @@ let type = "WebGL";
 
 var activeUpdated = null,
 	runData = null,
-	playerData = null;
+	playerData = null,
+	tickTimeHistogram = null,
+	tickTimeHistogramActive = false;
 
 if(!PIXI.utils.isWebGLSupported()) {
 	type = "canvas";
@@ -409,6 +411,10 @@ let level_load = (levelName) => {
 	
 	activeUpdated = new Gameplay(app, new IH(app.view), settings, runData);
 	
+	tickTimeHistogram = [];
+	for (let i = 0; i < 41; i++) { tickTimeHistogram.push(0); }
+	tickTimeHistogramActive = true;
+	
 	let levelStream;
 	
 	let fetchLevelProm = fetch('./levels/' + levelName + '.png').then(
@@ -435,6 +441,8 @@ let level_load = (levelName) => {
 	activeUpdated.trigger_end_victory = level_win;
 	
 	activeUpdated.trigger_end_defeat = (opts) => {
+		tickTimeHistogramActive = false;
+		
 		runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
 		runData.levels[runData.currentIndex].totalRunDeaths++;
 		level_load(runData.levels[runData.currentIndex].id);
@@ -444,6 +452,8 @@ let level_load = (levelName) => {
 }
 
 let level_win = (opts) => {
+	tickTimeHistogramActive = false;
+	
 	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
 	runData.levels[runData.currentIndex].victoryRunTime = opts.runTime;
 	runData.levels[runData.currentIndex].victoryRunInputs = opts.inputEvents;
@@ -458,6 +468,8 @@ let level_win = (opts) => {
 }
 
 let level_skip = (opts) => {
+	tickTimeHistogramActive = false;
+	
 	runData.levels[runData.currentIndex].totalRunTime += opts.runTime;
 	runData.levels[runData.currentIndex].victoryRunTime = -1;
 	
@@ -473,6 +485,17 @@ let level_skip = (opts) => {
 
 let gameLoop = (delta) => {
 	let deltaMS = app.ticker.deltaMS;
+	
+	if (tickTimeHistogramActive) {
+		let index = Math.round(deltaMS * 100);
+		
+		if (index >= 1687) { tickTimeHistogram[40]++; }
+		else if (index <= 1647) { tickTimeHistogram[0]++; }
+		else {
+			index -= 1647;
+			tickTimeHistogram[index]++;
+		}
+	}
 	
 	if (activeUpdated && activeUpdated.update) {
 		let ready = (activeUpdated.checkReady) ? activeUpdated.checkReady() : true;
